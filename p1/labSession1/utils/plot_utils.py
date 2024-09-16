@@ -145,8 +145,28 @@ def plot_inf_line(px1, px2, color='r'):
 def plot_points(points, color='r', marker='o', label=None):
     plt.plot(points[:, 0], points[:, 1], marker, color=color, label=label)
 
-def plot_point(px, color='r', marker='o', label=None):
-    plt.plot(px[0], px[1], marker, color=color, label=label)
+
+
+def plot_point(px, image_shape, color='r'):
+    # Dibujar el punto
+    plt.scatter([px[0]], [px[1]], color=color)
+
+    # Obtener los límites de la imagen
+    h, w = image_shape[:2]
+
+    # Ajustar los límites si el punto está fuera de la imagen
+    if px[0] < 0 or px[0] > w:
+        plt.xlim(min(0, px[0] - 50), max(w, px[0] + 50))
+    else:
+        plt.xlim(0, w)
+
+    if px[1] < 0 or px[1] > h:
+        plt.ylim(min(0, px[1] - 50), max(h, px[1] + 50))
+    else:
+        plt.ylim(0, h)
+
+    plt.gca().invert_yaxis()
+
 
 def plot_line_in_image(img, line, color='r'):
     """Dibuja una línea homogénea en la imagen, basada en los bordes de la imagen"""

@@ -41,13 +41,12 @@ def ej1(K_c, R_w_c1, R_w_c2, t_w_c1, t_w_c2, labels=['A', 'B', 'C', 'D', 'E'], v
     plot_utils.plotAndWait("Image 1")
 
     #plot_utils.project_and_plot_points("Image2.jpg", projections_cam2, labels, 'Image 2')
-    return P1, P2, projections_cam1, projections_cam2
+    return P1, P2, points_3D_hom, projections_cam1, projections_cam2
 
 
-def ej2(image_path, projections_cam, labels=['A', 'B', 'C', 'D', 'E']):
+def ej2(image_path, P1, g_points, projections_cam, labels=['A', 'B', 'C', 'D', 'E']):
 
     plot_utils.createPlot(image_path)
-
     # Mostrar proyecciones en las imágenes
     plot_utils.project_and_plot_points(projections_cam1, labels)
     plot_utils.plot_inf_line(projections_cam1[0], projections_cam1[1], 'g')
@@ -58,17 +57,27 @@ def ej2(image_path, projections_cam, labels=['A', 'B', 'C', 'D', 'E']):
     l_ab = utils.compute_line(projections_cam[0], projections_cam[1])
     l_cd = utils.compute_line(projections_cam[2], projections_cam[3])
 
+    v_ab = g_points[1] - g_points[0]
+    v_ab[2] = 0
+
+    # Project vanishing point to image
+    AB_inf = P1 @ v_ab
+    AB_inf = AB_inf / AB_inf[2]
+
     plot_utils.plot_line(l_ab, 'g')
     plot_utils.plot_line(l_cd, 'g')
 
     # Calcular y graficar la intersección de las líneas AB y CD
     intersection = utils.compute_intersection(l_ab, l_cd)
-    print(intersection)
-    plot_utils.plot_point(intersection, 'b')
+    
+    img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    image_shape = img.shape
+
+    plot_utils.plot_point(intersection, image_shape, 'b')
+    plot_utils.plot_point(AB_inf, image_shape, 'b')
 
     plot_utils.plotAndWait("Image 1")
-
-    exit()
+    
 
 if __name__ == '__main__':
     np.set_printoptions(precision=4, linewidth=1024, suppress=True)
@@ -81,5 +90,5 @@ if __name__ == '__main__':
     K_c = np.loadtxt(FOLDER_DATA + 'K.txt')
 
     # Ejecutar el ejercicio 1
-    P1, P2, projections_cam1, projections_cam2 = ej1(K_c, R_w_c1, R_w_c2, t_w_c1, t_w_c2)
-    ej2("Image1.jpg", projections_cam1)
+    P1, P2, g_points, projections_cam1, projections_cam2 = ej1(K_c, R_w_c1, R_w_c2, t_w_c1, t_w_c2)
+    ej2("Image1.jpg", P1, g_points, projections_cam1)

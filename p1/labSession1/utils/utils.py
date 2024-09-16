@@ -37,8 +37,6 @@ def compute_intersection(line1, line2):
     a1, b1, c1 = line1
     a2, b2, c2 = line2
     det = a1*b2 - a2*b1
-    if det == 0:
-        return None
     x = (b1*c2 - b2*c1) / det
     y = (a2*c1 - a1*c2) / det
     return x, y
