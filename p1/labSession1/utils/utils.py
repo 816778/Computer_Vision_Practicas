@@ -1,6 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+"""
+FUNCIONES PARA LOS EJERCICIOS 1 Y 2
+"""
 def ensamble_T(R_w_c, t_w_c) -> np.array:
     """
     Ensambla una matriz SE(3) con la matriz de rotación y el vector de traslación.
@@ -46,4 +50,12 @@ def compute_intersection(line1, line2):
     x = (b1*c2 - b2*c1) / det
     y = (a2*c1 - a1*c2) / det
     return x, y
+
+
+
+
+"""
+FUNCIONES PARA LOS EJERCICIOS 3 Y 4
+"""
+
 

@@ -2,6 +2,11 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
+
+"""
+FUNCIONES PARA LOS EJERCICIOS 1 Y 2
+"""
+
 def plotLabeledImagePoints(x, labels, strColor, offset):
     """
     Dibuja los índices de los puntos en una imagen 2D.
@@ -54,6 +59,7 @@ def createPlot(image_path):
     plt.figure()
     plt.imshow(img)
 
+
 def plotAndWait(title):
 
     # Título y visualización
@@ -62,6 +68,7 @@ def plotAndWait(title):
     print('Click en la imagen para continuar...')
     plt.waitforbuttonpress()  # Espera un click para continuar
     plt.close()
+
 
 def project_and_plot_points(projected_points, labels, image_shape):
 
@@ -132,9 +139,6 @@ def adjust_limits(projected_points, px, image_shape, verbose=False):
     plt.gca().invert_yaxis()
     
 
-def plot_line_2(px1, px2, color='r'):
-    plt.plot([px1[0], px2[0]], [px1[1], px2[1]], color)
-
 def plot_line(line, color='r'):
     """
     Dibuja una línea en el plano 2D.
@@ -204,35 +208,37 @@ def plot_and_compute_inf_line(px1, px2, color='r'):
     plt.scatter([x1, x2], [y1, y2], color=color, zorder=5)
     plt.xlim(xlim)
     plt.ylim(ylim)
-
-
-def plot_points(points, color='r', marker='o', label=None):
-    plt.plot(points[:, 0], points[:, 1], marker, color=color, label=label)
-
-
-
-def plot_point(px, image_shape, color='r'):
-    # Dibujar el punto
-    plt.scatter([px[0]], [px[1]], color=color)
     
 
 
-def plot_line_in_image(img, line, color='r'):
-    """Dibuja una línea homogénea en la imagen, basada en los bordes de la imagen"""
-    h, w, _ = img.shape
-    
-    # Para calcular dos puntos extremos en la imagen (en los bordes)
-    # Puntos en los bordes izquierdo y derecho
-    x_left = 0
-    y_left = -line[2] / line[1]  # Resolver para y cuando x = 0
-    x_right = w
-    y_right = -(line[2] + line[0] * x_right) / line[1]  # Resolver para y cuando x = ancho imagen
+"""
+FUNCIONES PARA LOS EJERCICIOS 3 Y 4
+"""
+def drawLine(l, strFormat, lWidth, label):
+    """
+    Draw a line
+    -input:
+      l: image line in homogenous coordinates
+      strFormat: line format
+      lWidth: line width
+      label: legend label for the line
+    -output: None
+    """
+    # p_l_y is the intersection of the line with the axis Y (x=0)
+    p_l_y = np.hstack((0, -l[2] / l[1]))
+    # p_l_x is the intersection point of the line with the axis X (y=0)
+    p_l_x = np.hstack((-l[2] / l[0], 0))
+    # Draw the line segment p_l_x to  p_l_y
+    plt.plot([p_l_y[0], p_l_x[0]], [p_l_y[1], p_l_x[1]], strFormat, linewidth=lWidth, label=label)
 
-    # Asegurarse de que los puntos están dentro de los límites de la imagen
-    if y_left < 0 or y_left > h:
-        y_left = 0 if y_left < 0 else h
-    if y_right < 0 or y_right > h:
-        y_right = 0 if y_right < 0 else h
 
-    # Dibuja la línea entre los puntos en los bordes
-    plt.plot([x_left, x_right], [y_left, y_right], color)
+
+def plot_true_line():
+    # Ground truth line (line in homogeneous coordinates)
+    l_GT = np.array([[2], [1], [-1500]])
+
+    plt.figure(1)
+    plt.plot([-100, 1800], [0, 0], '--k', linewidth=1)  # X-axis
+    plt.plot([0, 0], [-100, 1800], '--k', linewidth=1)  # Y-axis
+    drawLine(l_GT, 'g-', 1, label='Truth line')
+    plt.axis('equal')
