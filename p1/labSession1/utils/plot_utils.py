@@ -63,17 +63,76 @@ def plotAndWait(title):
     plt.waitforbuttonpress()  # Espera un click para continuar
     plt.close()
 
-def project_and_plot_points(projected_points, labels):
+def project_and_plot_points(projected_points, labels, image_shape):
 
+    h, w = image_shape[:2]
     # Graficar los puntos proyectados
     plt.plot(projected_points[:, 0], projected_points[:, 1], '+r', markersize=15)
     
     # Etiquetas de los puntos proyectados
     plotLabeledImagePoints(projected_points, labels, 'r', (20, -20))
     plotNumberedImagePoints(projected_points, 'r', (20, 25))
+
+
+def adjust_limits(projected_points, px, image_shape, verbose=False):
+    """
+    Ajusta los límites del gráfico si los puntos proyectados o el punto px están fuera de la imagen.
+
+    Parameters
+    ----------
+    projected_points : numpy array
+        Los puntos proyectados en el plano 2D.
+    px : tuple or list
+        El punto adicional que podría estar fuera de los límites.
+    image_shape : tuple
+        La forma de la imagen (alto, ancho).
+    """
+
+    h, w = image_shape[:2]
+    expand_x = False
+    expand_y = False
+    min_x = None
+    max_x = None
+    min_y = None
+    max_y = None
+
+    if px[0] < 0 or px[0] > w:
+        expand_x = True
+    if px[1] < 0 or px[1] > h:
+        expand_y = True
+
+    # Comprobar si los puntos proyectados están fuera de los límites
+    if np.any(projected_points[:, 0] < 0) or np.any(projected_points[:, 0] > w):
+        expand_x = True
+    if np.any(projected_points[:, 1] < 0) or np.any(projected_points[:, 1] > h):
+        expand_y = True
     
 
-def plot_line(px1, px2, color='r'):
+    # Ajustar los límites de x
+    if expand_x:
+        min_x = min(0, np.min(projected_points[:, 0]), px[0] - 50)
+        max_x = max(w, np.max(projected_points[:, 0]), px[0] + 50)
+        plt.xlim(min_x, max_x)
+    else:
+        plt.xlim(0, w)
+
+    # Ajustar los límites de y
+    if expand_y:
+        min_y = min(0, np.min(projected_points[:, 1]), px[1] - 50)
+        max_y = max(h, np.max(projected_points[:, 1]), px[1] + 50)
+        plt.ylim(min_y, max_y)
+    else:
+        plt.ylim(0, h)
+    
+    if verbose:
+        print(f"min_x: {min_x}\n max_x: {max_x}\n")
+        print(f"min_y: {min_y}\n max_y: {max_y}\n")
+    
+    # Invertir el eje y para que el origen esté en la esquina superior izquierda
+    plt.gca().invert_yaxis()
+    
+
+def plot_line_2(px1, px2, color='r'):
     plt.plot([px1[0], px2[0]], [px1[1], px2[1]], color)
 
 def plot_line(line, color='r'):
@@ -99,28 +158,35 @@ def plot_line(line, color='r'):
 
 
 # Plot infinite line that passes through both points
-def plot_inf_line(px1, px2, color='r'):
+def plot_and_compute_inf_line(px1, px2, color='r'):
     """
-    Plots an infinite line passing through two given pixel coordinates.
+    Dibuja una línea infinita entre dos puntos y calcula la ecuación de la recta.
     
-    Parameters:
-    coord1: tuple of ints (x1, y1)
-        The first pixel coordinate.
-    coord2: tuple of ints (x2, y2)
-        The second pixel coordinate.
+    Parámetros:
+    p1, p2: Tuplas (x, y)
+        Coordenadas de los puntos por los cuales pasa la línea.
+    color: str
+        Color de la línea.
+        
+    Retorna:
+    tuple (a, b, c)
+        Coeficientes de la ecuación ax + by + c = 0.
     """
     x1, y1 = px1
     x2, y2 = px2
 
-    # Calculate the slope (m) of the line
+    # Calcular los coeficientes de la línea ax + by + c = 0
+    a = y1 - y2
+    b = x2 - x1
+    c = x1 * y2 - x2 * y1
+
+    # Dibujo de la línea infinita
     if x1 != x2:
         slope = (y2 - y1) / (x2 - x1)
         intercept = y1 - slope * x1
     else:
-        # Vertical line case
         slope = None
 
-    # Get the current axis limits
     ax = plt.gca()
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -132,8 +198,6 @@ def plot_inf_line(px1, px2, color='r'):
         # Calculate the y-values of the line at the extremes of the x-limits
         x_vals = np.array(xlim)
         y_vals = slope * x_vals + intercept
-
-        # Extend the line only within the current y-limits
         plt.plot(x_vals, y_vals, color=color)
 
     # Mark the points for clarity
@@ -150,22 +214,7 @@ def plot_points(points, color='r', marker='o', label=None):
 def plot_point(px, image_shape, color='r'):
     # Dibujar el punto
     plt.scatter([px[0]], [px[1]], color=color)
-
-    # Obtener los límites de la imagen
-    h, w = image_shape[:2]
-
-    # Ajustar los límites si el punto está fuera de la imagen
-    if px[0] < 0 or px[0] > w:
-        plt.xlim(min(0, px[0] - 50), max(w, px[0] + 50))
-    else:
-        plt.xlim(0, w)
-
-    if px[1] < 0 or px[1] > h:
-        plt.ylim(min(0, px[1] - 50), max(h, px[1] + 50))
-    else:
-        plt.ylim(0, h)
-
-    plt.gca().invert_yaxis()
+    
 
 
 def plot_line_in_image(img, line, color='r'):

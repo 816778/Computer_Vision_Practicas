@@ -19,11 +19,17 @@ def get_projection_matrix(K, R, t):
     P = K @ T[:3, :]  # Matriz de proyección
     return P
 
-def project_points(P, points_3D_hom):
+def project_points(P, points_3D_hom, return_homogeneous=False):
     projected_points_hom = P @ points_3D_hom.T  # Proyección
+    projected_points_hom_normalized = projected_points_hom / projected_points_hom[2]
     # Convertir de homogéneo a cartesiano
-    projected_points_2D = projected_points_hom[:2] / projected_points_hom[2]
-    return projected_points_2D.T
+    if return_homogeneous:
+        # Devolver las 3 coordenadas homogéneas normalizadas (con la tercera componente igual a 1)
+        return projected_points_hom_normalized.T
+    else:
+        # Devolver solo las 2 primeras coordenadas normalizadas (formato cartesiano)
+        projected_points_2D = projected_points_hom_normalized[:2]
+        return projected_points_2D.T
 
 def compute_line(p1, p2):
     """Calcula la recta que pasa por dos puntos"""
