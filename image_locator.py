@@ -59,18 +59,101 @@ def plot_triangle(a, b, c):
     cv2.destroyAllWindows()
 
 
+def decompose_fov(diagonal_fov, aspect_ratio_w, aspect_ratio_h):
+
+    Ha = np.radians(aspect_ratio_w)
+    Va = np.radians(aspect_ratio_h)
+    Df = np.radians(diagonal_fov)
+
+    Da = np.sqrt(Ha*Ha + Va*Va)
+
+    Hf = np.arctan(np.tan(Df/2) * (Ha/Da)) * 2
+    Vf = np.arctan(np.tan(Df/2) * (Va/Da)) * 2
+
+    return np.degrees(Hf), np.degrees(Vf)
+
+
+def load_image(image_path):
+    # Load the image
+    img = cv2.imread(image_path)
+
+    # Resize the image
+    img = cv2.resize(img, (1280, 720))
+
+    # Display the image
+    cv2.imshow("Image", img)
+
+    return img
+
+def capture_points(img):
+
+    points = []
+
+    # Mouse event callback function
+    def mouse_event(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print("Clicked at: ", x, y)
+
+            points.append((x, y))
+
+            cv2.circle(img, (x, y), 5, (0, 0, 255), -1)
+            cv2.imshow("Image", img)
+
+    # Set the mouse callback function
+    cv2.setMouseCallback("Image", mouse_event)
+
+    # Wait for the user to click on the image
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    return np.array(points)
+
 
 
 def main():
     tower_h = 95
-    segment_angle1 = 10 # degrees
-    segment_angle2 = 20 # degrees
+    diagonal_fov = 83.259
 
-    towers_angle = 40 # degrees
+    # Load the image
+    img = load_image("img/izqRot.jpg")
+    img_height, img_width, _ = img.shape
 
+    # Calculate the horizontal and vertical FOV
+    Hf, Vf = decompose_fov(diagonal_fov, 16, 9)
+
+
+    # Capture the points
+    points = capture_points(img)
+
+    vt1 = points[0] - points[1]
+    vt2 = points[2] - points[3]
+    vt1t2 = points[0] - points[2]
+
+    dt1 = np.linalg.norm(vt1)
+    dt2 = np.linalg.norm(vt2)
+    dt1t2 = np.linalg.norm(vt1t2)
+
+
+    # Raster space to image space
+    dt1 = dt1 / img_height
+    dt2 = dt2 / img_height
+    dt1t2 = dt1t2 / img_width
+
+    print("dt1: ", dt1)
+    print("dt2: ", dt2)
+    print("dt1t2: ", dt1t2)
+
+    # Calculate the angle of the segment
+    segment_angle1 = Vf * dt1
+    segment_angle2 = Vf * dt2
+    towers_angle = Hf * dt1t2
+    
+
+    
     # Calculate the distance from the camera to the tower
     segment_angle1 = np.radians(segment_angle1)
     segment_angle2 = np.radians(segment_angle2)
+    towers_angle = np.radians(towers_angle)
 
     d1 = distance(segment_angle1, tower_h)
     d2 = distance(segment_angle2, tower_h)
