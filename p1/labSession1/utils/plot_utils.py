@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 
 """
@@ -242,3 +243,35 @@ def plot_true_line():
     plt.plot([0, 0], [-100, 1800], '--k', linewidth=1)  # Y-axis
     drawLine(l_GT, 'g-', 1, label='Truth line')
     plt.axis('equal')
+
+
+def plot_plane_3d(points_3D_with_E, a, b, c, d, distances_with_E):
+    # Visualizar los puntos, el plano, y las distancias
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Graficar los puntos A, B, C, D, E
+    ax.scatter(points_3D_with_E[:, 0], points_3D_with_E[:, 1], points_3D_with_E[:, 2], color='r', label='Puntos A, B, C, D, E')
+
+    # Graficar el plano
+    xlim = np.array([3.4, 4.3])
+    ylim = np.array([0.5, 0.9])
+    X, Y = np.meshgrid(xlim, ylim)
+    Z = (-a * X - b * Y - d) / c
+    ax.plot_surface(X, Y, Z, color='blue', alpha=0.5, rstride=100, cstride=100)
+
+    # Graficar líneas desde cada punto al plano (distancias)
+    for point, dist in zip(points_3D_with_E, distances_with_E):
+        # Proyección del punto sobre el plano
+        x_proj, y_proj, z_proj = point - dist * np.array([a, b, c]) / np.sqrt(a**2 + b**2 + c**2)
+        # Graficar la línea entre el punto y su proyección en el plano
+        ax.plot([point[0], x_proj], [point[1], y_proj], [point[2], z_proj], 'g--')
+
+    # Configuraciones adicionales
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title('Distancia de los puntos A, B, C, D, E al plano')
+    ax.legend()
+
+    plt.show()

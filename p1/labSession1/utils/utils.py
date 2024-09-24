@@ -57,5 +57,8 @@ def compute_intersection(line1, line2):
 """
 FUNCIONES PARA LOS EJERCICIOS 3 Y 4
 """
+def distance_point_to_plane(point, a, b, c, d):
+    x, y, z = point
+    return np.abs(a * x + b * y + c * z + d) / np.sqrt(a**2 + b**2 + c**2)
 
 
