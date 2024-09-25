@@ -131,7 +131,7 @@ def main():
 
     dt1 = np.linalg.norm(vt1)
     dt2 = np.linalg.norm(vt2)
-    dt1t2 = np.linalg.norm(vt1t2)
+    dt1t2 = np.abs(vt1t2[0])
 
 
     # Raster space to image space
