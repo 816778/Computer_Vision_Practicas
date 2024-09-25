@@ -1,39 +1,40 @@
-#####################################################################################
-#
-# MRGCV Unizar - Computer vision - Laboratory 2
-#
-# Title: Homography, Fundamental Matrix and Two View SfM
-#
-# Date: 5 September 2024
-#
-#####################################################################################
-#
-# Authors: Jesus Bermudez, Richard Elvira, Jose Lamarca, JMM Montiel
-#
-# Version: 2.0
-#
-#####################################################################################
-
+import matplotlib.pyplot as plt
+import cv2
+import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-import matplotlib.pyplot as plt
-import numpy as np
-import cv2
 
-DATA_PATH = 'data/'
+def createPlot(image_path=None):
+    # Cargar la imagen y convertirla a RGB
+    if image_path is not None:
+        img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
 
-# Ensamble T matrix
-def ensamble_T(R_w_c, t_w_c) -> np.array:
-    """
-    Ensamble the a SE(3) matrix with the rotation matrix and translation vector.
-    """
-    T_w_c = np.zeros((4, 4))
-    T_w_c[0:3, 0:3] = R_w_c
-    T_w_c[0:3, 3] = t_w_c
-    T_w_c[3, 3] = 1
-    return T_w_c
+    # Crear una figura para la imagen
+    plt.figure()
+    if image_path is not None:
+        plt.imshow(img)
 
+def plotAndWait(title='Grafico'):
 
+    # Título y visualización
+    plt.title(title)
+    plt.draw()  # Actualizar la figura
+    print('Click en la imagen para continuar...')
+    plt.waitforbuttonpress()  # Espera un click para continuar
+    plt.close()
+
+def plotAndClose(title='Grafico'):
+
+    # Título y visualización
+    plt.title(title)
+    plt.draw() 
+    plt.show()
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.close()
+
+"""
+FUNCIONES PARA LOS EJERCICIOS 1 Y 2
+"""
 def plotLabeledImagePoints(x, labels, strColor,offset):
     """
         Plot indexes of points on a 2D image.
@@ -114,64 +115,24 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
-if __name__ == '__main__':
-    np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
+def points_3d(X, X_w=None):
+    # Visualizar los puntos 3D triangulados en un gráfico 3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    # Graficar los puntos 3D
+    ax.scatter(X[0, :], X[1, :], X[2, :], c='b', marker='o', label='Puntos triangulados')
+    
+    if X_w is not None:
+        ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], c='r', marker='^', label='Puntos originales (X_w)')
 
-    # Load ground truth
-    T_w_c1 = np.loadtxt(DATA_PATH + 'T_w_c1.txt')
-    T_w_c2 = np.loadtxt(DATA_PATH + 'T_w_c2.txt')
-
-    K_c = np.loadtxt(DATA_PATH + 'K_c.txt')
-    X_w = np.loadtxt(DATA_PATH + 'X_w.txt')
-
-    x1 = np.loadtxt(DATA_PATH + 'x1Data.txt')
-    x2 = np.loadtxt(DATA_PATH + 'x2Data.txt')
-
-
-    ##Plot the 3D cameras and the 3D points
-    fig3D = plt.figure(3)
-
-    ax = plt.axes(projection='3d', adjustable='box')
+    # Etiquetas de los ejes
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-
-    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    drawRefSystem(ax, T_w_c1, '-', 'C1')
-    drawRefSystem(ax, T_w_c2, '-', 'C2')
-
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
-    #plotNumbered3DPoints(ax, X_w, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
-
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
-
-    IMAGE_PATH = 'images/'
-    ## 2D plotting example
-    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
-    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
-
-
-    plt.figure(1)
-    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 1')
-    plt.draw()  # We update the figure display
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
-
-    plt.figure(2)
-    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 2')
-    plt.draw()  # We update the figure display
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
+    ax.set_title('Puntos 3D Triangulados')
+    
+    # Mostrar leyenda
+    ax.legend()
+    
