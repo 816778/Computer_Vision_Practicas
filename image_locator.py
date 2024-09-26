@@ -13,12 +13,17 @@ def distance(segment_angle, segment_length):
 def cosine_theorem_third_side(d1, d2, alpha):
     return np.sqrt(d1*d1 + d2*d2 - 2*d1*d2*np.cos(alpha))
 
-def plot_triangle(a, b, c):
+def plot_triangle(a, b, c, scale=1):
     # Check if a triangle is valid with the given sides
     if a + b <= c or a + c <= b or b + c <= a:
         print("Invalid triangle sides.")
         return
     
+    a = int(a * scale)
+    b = int(b * scale)
+    c = int(c * scale)
+
+
     # Coordinates of the first point
     A = (100, 100)  # Starting point A
 
@@ -108,6 +113,10 @@ def capture_points(img):
 
     return np.array(points)
 
+def camera_horizontal_alpha(relative_width, dmin):
+    
+    return 2 * np.acos(relative_width/(2*dmin))
+
 
 
 def main():
@@ -115,7 +124,7 @@ def main():
     diagonal_fov = 83.259
 
     # Load the image
-    img = load_image("img/izqRot.jpg")
+    img = load_image("img/103.jpg")
     img_height, img_width, _ = img.shape
 
     # Calculate the horizontal and vertical FOV
@@ -133,7 +142,6 @@ def main():
     dt2 = np.linalg.norm(vt2)
     dt1t2 = np.abs(vt1t2[0])
 
-
     # Raster space to image space
     dt1 = dt1 / img_height
     dt2 = dt2 / img_height
@@ -145,28 +153,34 @@ def main():
 
     # Calculate the angle of the segment
     segment_angle1 = Vf * dt1
-    segment_angle2 = Vf * dt2
+    segment_angle2 = Vf * dt2    
     towers_angle = Hf * dt1t2
-    
 
     
     # Calculate the distance from the camera to the tower
     segment_angle1 = np.radians(segment_angle1)
     segment_angle2 = np.radians(segment_angle2)
-    towers_angle = np.radians(towers_angle)
+    towers_angle = np.radians(towers_angle) # Camera horizontal angle returns in radians
 
     d1 = distance(segment_angle1, tower_h)
     d2 = distance(segment_angle2, tower_h)
-    d3 = cosine_theorem_third_side(d1, d2, towers_angle)
 
-    d1 = (int)(d1/2)
-    d2 = (int)(d2/2)
-    d3 = (int)(d3/2)
+    #if d1 < d2:
+    #    dmin = np.minimum(d1, d2)
+    #    k_ = (dt1t2 / (np.abs(vt1[1]) / img_height)) * dmin
+    #else:
+    #    dmin = np.minimum(d1, d2)
+    #    k_ = (dt1t2 / (np.abs(vt2[1]) / img_width)) * dmin
+#
+    #towers_angle = camera_horizontal_alpha(k_, dmin)
+    #print("Towers angle:", towers_angle)
+    
+    d3 = cosine_theorem_third_side(d1, d2, towers_angle)
 
     print("D1: ", d1)
     print("D2: ", d2)
     print("D3: ", d3)
-    plot_triangle(d1, d2, d3)
+    plot_triangle(d1, d2, d3, 1)
 
 if __name__ == "__main__":
     main()
