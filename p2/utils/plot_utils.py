@@ -13,6 +13,7 @@ def createPlot(image_path=None):
     plt.figure()
     if image_path is not None:
         plt.imshow(img)
+        plt.axis('on')
 
 def plotAndWait(title='Grafico'):
 
@@ -136,3 +137,86 @@ def points_3d(X, X_w=None):
     # Mostrar leyenda
     ax.legend()
     
+def draw_epipolar_line(img, line, color='r'):
+    """
+    Función para dibujar la línea epipolar en una imagen usando Matplotlib.
+    img: Imagen sobre la que se dibuja.
+    line: Parámetros de la línea epipolar [a, b, c], con la ecuación ax + by + c = 0.
+    """
+    h, w, _ = img.shape
+    # Calculamos los puntos de intersección de la línea con los bordes de la imagen
+    x0, y0 = 0, int(-line[2] / line[1])  # Intersección con el borde izquierdo (x = 0)
+    x1, y1 = w, int(-(line[2] + line[0] * w) / line[1])  # Intersección con el borde derecho (x = w)
+
+    # Limitar los valores dentro de los límites de la imagen
+    y0 = max(0, min(h - 1, y0))
+    y1 = max(0, min(h - 1, y1))
+    
+    # Dibujar la línea en matplotlib
+    plt.plot([x0, x1], [y0, y1], color=color)
+
+
+def show_points_on_image(x_coords, y_coords, labels=None):
+    """
+    Muestra los puntos en la imagen y los etiqueta.
+    
+    Args:
+        image_path (str): Ruta de la imagen donde se mostrarán los puntos.
+        points (list or array): Lista o array de puntos a mostrar (cada punto debe ser un array [x, y]).
+        labels (list, optional): Lista de etiquetas para los puntos. Si no se proporciona, no se etiquetan.
+    """     
+    # Dibujar los puntos en la imagen
+    plt.scatter(x_coords, y_coords, color='yellow', s=100, marker='x', label='Puntos')
+    
+    # Etiquetar los puntos si se proporcionan etiquetas
+    if labels is not None:
+        for i, label in enumerate(labels):
+            plt.text(x_coords[i] + 10, y_coords[i] - 10, label, color='red', fontsize=12)
+    
+    # Mostrar el resultado
+    plt.title('Puntos proyectados en la imagen')
+    plt.axis('off')  # Ocultar los ejes
+    plt.show()
+
+def show_points_and_line(x_coords, y_coords, labels=None):
+    """
+    Dibuja puntos y una línea entre ellos sobre la imagen.
+    
+    Args:
+        x_coords (list or array): Lista con las coordenadas X de los puntos.
+        y_coords (list or array): Lista con las coordenadas Y de los puntos.
+        labels (list, optional): Lista de etiquetas para los puntos.
+    """
+    # Dibujar los puntos en la imagen
+    plt.scatter(x_coords, y_coords, color='yellow', s=100, marker='x')
+
+    # Etiquetar los puntos si se proporcionan etiquetas
+    if labels is not None:
+        for i, label in enumerate(labels):
+            plt.text(x_coords[i] + 10, y_coords[i] - 10, label, color='red', fontsize=12)
+
+    # Dibujar la línea que conecta los puntos
+    plt.plot(x_coords, y_coords, color='blue', linewidth=2)
+
+
+
+def plot_epipolar_lines(F, x1, img2, num_lines=5):
+    """
+    Dibuja las líneas epipolares en la segunda imagen a partir de los puntos en la primera imagen.
+    """
+    plt.figure()
+    plt.imshow(img2, cmap='gray')
+
+    for i in range(len(x1[0])):
+        p1 = np.append(x1[:, i], 1)  # Punto en coordenadas homogéneas
+        l2 = F @ p1  # Línea epipolar en la segunda imagen
+
+        # Dibujar la línea epipolar
+        x_vals = np.array([0, img2.shape[1]])  # Límites de la imagen
+        y_vals = -(l2[0] * x_vals + l2[2]) / l2[1]
+        plt.plot(x_vals, y_vals, color='blue')
+
+    plt.title('Líneas Epipolares en la Imagen 2')
+    plt.show()
+
+

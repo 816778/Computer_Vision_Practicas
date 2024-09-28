@@ -42,6 +42,94 @@ def ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False):
     plot_utils.plotAndClose()
 
 
+def ej2_1(F):
+    """
+    APARTADO 2_1: Epipolar lines visualization
+    """
+    # seleccionar un punto en la primera imagen
+    p1 = np.array([297, 307, 1]) 
+
+    # Calcular y visualizar la línea epipolar correspondiente en la imagen 2
+    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+    # l2​ = F⋅p1
+    l2 = np.dot(F, p1)
+
+    print(l2)
+
+    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+    x_coords = [p1[0]] 
+    y_coords = [p1[1]]
+    labels = ['P1']  
+    plot_utils.show_points_on_image(x_coords, y_coords, labels)
+    plot_utils.plotAndWait()
+
+    #Encontrar puntos  extremos de la línea epipolar
+    plot_utils.createPlot(IMAGE_PATH + 'image2.png')
+    y_1 = -(l2[0] * 0 + l2[2]) / l2[1] # -(a * x + c) / b Encontrar y cuando x = 0
+    x_2 = -(l2[1] * 0 + l2[2]) / l2[0] # -(b * y + c) / a Encontrar x cuando y = 0
+    x_coords = [0, x_2]
+    y_coords = [y_1, 0]
+    labels = ['P1', 'P2']  
+    plot_utils.show_points_and_line(x_coords, y_coords, labels)
+    plot_utils.plotAndWait()
+ 
+
+def ej2_2(T_w_c1, T_w_c2, K_c, x1):
+    """
+    APARTADO 2.2: Fundamental matrix definition"
+    """
+    # l2​ = F⋅p1
+    # Matriz fundamental F: p2^T⋅F⋅p1 = 0
+    # p1 punto coordenadas homogéneas primera imagen
+    # p2 punto coordenadas homogéneas segunda imagen
+    """
+    F: e puede calcular a partir de las posiciones de las cámaras.
+    Se utiliza la matriz de esencialidad E
+    E = [t]R
+    F = K2^-T*E*K1^-1
+    """
+    F = utils.calculate_fundamental_matrix(T_w_c1, T_w_c2, K_c)
+    print("Matriz Fundamental (F): \n", F)
+    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+
+    # Dibujar las líneas epipolares en la imagen 2
+    plot_utils.plot_epipolar_lines(F, x1, img2, num_lines=7)
+    return F
+
+
+def ej2_3(x1, x2):
+    """
+    APARTADO 2.3: Fundamental matrix linear estimation with eight point solution.
+    """
+    x1_h = np.vstack((x1, np.ones(x1.shape[1])))
+    x2_h = np.vstack((x2, np.ones(x2.shape[1])))
+    F_est = utils.estimate_fundamental_8point(x1_h, x2_h)
+    print("Matriz Fundamental estimada (F): \n", F_est)
+
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+    
+    x_coords = [368, 101, 200, 500, 363]
+    y_coords = [390, 452, 247, 370, 112]
+    
+    assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
+    labels = [str(i+1) for i in range(len(x_coords))]
+    plot_utils.show_points_on_image(x_coords, y_coords, labels)
+    x_coords = np.array(x_coords)
+    y_coords = np.array(y_coords)
+    x1 = np.vstack((x_coords, y_coords))
+    plot_utils.plot_epipolar_lines(F, x1, img2, num_lines=7)
+    return F
+
+
+
+def ej2_4():
+    exit()
+
+
+
 if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
@@ -56,4 +144,5 @@ if __name__ == '__main__':
     x1 = np.loadtxt(DATA_PATH + 'x1Data.txt')
     x2 = np.loadtxt(DATA_PATH + 'x2Data.txt')
 
-    ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w)
+    F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
+    ej2_4(x1, x2)
