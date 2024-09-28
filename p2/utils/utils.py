@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import cv2
 
 """
 FUNCIONES PARA LOS EJERCICIOS 1 Y 2
@@ -108,3 +108,69 @@ def estimate_fundamental_8point(x1, x2):
     F = U @ np.diag(S) @ Vt
 
     return F
+
+
+def decompose_essential_matrix(E):
+    """
+    Descompone la matriz esencial E en las cuatro posibles soluciones de R (rotación) y t (traslación).
+    """
+    U, _, Vt = np.linalg.svd(E)
+    
+    # Asegurarse de que U y Vt son matrices de rotación
+    if np.linalg.det(U) < 0:
+        U[:, -1] *= -1
+    if np.linalg.det(Vt) < 0:
+        Vt[-1, :] *= -1
+
+    # Definir W para la descomposición
+    W = np.array([[0, -1, 0],
+                  [1, 0, 0],
+                  [0, 0, 1]])
+
+    # Dos posibles rotaciones
+    R1 = U @ W @ Vt
+    R2 = U @ W.T @ Vt
+
+    # Dos posibles traslaciones (normalizada)
+    t = U[:, 2]  # vector de traslación
+    return R1, R2, t, -t
+
+def triangulate_points(P1, P2, x1, x2):
+    """
+    Triangular puntos 3D a partir de las matrices de proyección P1 y P2 y las correspondencias x1 y x2.
+    """
+    # Triangular los puntos
+    X_homogeneous = cv2.triangulatePoints(P1, P2, x1[:2], x2[:2])
+
+    # Convertir a coordenadas 3D
+    X = X_homogeneous / X_homogeneous[3]
+    return X[:3]
+
+
+def select_correct_pose(R1, R2, t, K1, K2, x1, x2):
+    """
+    Selecciona la correcta entre las cuatro posibles soluciones triangulando los puntos 3D y verificando
+    que estén delante de las cámaras.
+    """
+    # Matriz de proyección de la primera cámara
+    P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))
+
+    # Posibles matrices de proyección para la segunda cámara
+    P2_options = [
+        K2 @ np.hstack((R1, t.reshape(3, 1))),
+        K2 @ np.hstack((R1, -t.reshape(3, 1))),
+        K2 @ np.hstack((R2, t.reshape(3, 1))),
+        K2 @ np.hstack((R2, -t.reshape(3, 1)))
+    ]
+
+    # Para cada opción, triangula los puntos y verifica si están delante de las cámaras
+    for i, P2 in enumerate(P2_options):
+        X = triangulate_points(P1, P2, x1, x2)
+
+        # Verificar si los puntos triangulados están delante de ambas cámaras (Z > 0)
+        if np.all(X[2, :] > 0):
+            print(f"Solución correcta encontrada: Opción {i + 1}")
+            return P2
+
+    print("No se encontró una solución válida.")
+    return None

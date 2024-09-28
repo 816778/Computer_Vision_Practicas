@@ -125,8 +125,21 @@ def ej2_3(x1, x2):
 
 
 
-def ej2_4():
-    exit()
+def ej2_4(F, K1, K2, x1, x2):
+    """
+    APARTADO 2.4: Pose estimation from two views
+    """
+    # Calcula la matriz esencial E a partir de la matriz fundamental F y las matrices intrínsecas K1 y K2.
+    E = K2.T @ F @ K1
+    print("Matriz esencial E:\n", E)
+
+    # Descomponer la matriz esencial E en 4 posibles soluciones
+    R1, R2, t, t_neg = utils.decompose_essential_matrix(E)
+
+    # Seleccionar la solución correcta triangulando los puntos 3D
+    P2_correcta = utils.select_correct_pose(R1, R2, t, K1, K2, x1, x2)
+    print("Matriz de proyección correcta para la segunda cámara:\n", P2_correcta)
+    return P2_correcta
 
 
 
@@ -145,4 +158,4 @@ if __name__ == '__main__':
     x2 = np.loadtxt(DATA_PATH + 'x2Data.txt')
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
-    ej2_4(x1, x2)
+    ej2_4(F, K_c, K_c, x1, x2)
