@@ -264,19 +264,19 @@ if __name__ == '__main__':
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
 
-    # ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
-    # ej2_1(F)
-    # ej2_2(T_w_c1, T_w_c2, K_c, x1)
-    # ej2_3(x1, x2)
-    # ej2_4(F, K_c, K_c, x1, x2)
-    # X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
-    # ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)
+    ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
+    ej2_1(F)
+    ej2_2(T_w_c1, T_w_c2, K_c, x1)
+    ej2_3(x1, x2)
+    ej2_4(F, K_c, K_c, x1, x2)
+    X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
+    ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)
 
     x1Floor = np.loadtxt(DATA_PATH + 'x1FloorData.txt')
     x2Floor = np.loadtxt(DATA_PATH + 'x2FloorData.txt')
     ec_plane = np.loadtxt(DATA_PATH + 'Pi_1.txt')
 
-    # H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, ec_plane)
-    # x2_estimated = ej3_2(H, x1Floor)
+    H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, ec_plane)
+    x2_estimated = ej3_2(H, x1Floor)
     ej3_3(x1Floor, x2Floor)
 
