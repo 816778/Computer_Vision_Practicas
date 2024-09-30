@@ -116,7 +116,7 @@ def decompose_essential_matrix(E):
     """
     U, _, Vt = np.linalg.svd(E)
     
-    # Asegurarse de que U y Vt son matrices de rotación
+    # Comprobar que U y Vt son matrices de rotación
     if np.linalg.det(U) < 0:
         U[:, -1] *= -1
     if np.linalg.det(Vt) < 0:

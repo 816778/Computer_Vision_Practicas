@@ -34,12 +34,14 @@ def ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False):
     if verbose:
         print("Puntos 3D triangulados: \n", X)
     
-    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
-    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+        img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+        img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
 
-    plot_utils.createPlot()
-    plot_utils.points_3d(X, X_w)
-    plot_utils.plotAndClose()
+        plot_utils.createPlot()
+        plot_utils.points_3d(X, X_w)
+        plot_utils.plotAndClose()
+    
+    return X_h
 
 
 def ej2_1(F):
@@ -142,6 +144,80 @@ def ej2_4(F, K1, K2, x1, x2):
     return P2_correcta
 
 
+def ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2):
+    """
+    APARTADO 2.5: Results presentation
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.scatter(X_triangulated[0, :], X_triangulated[1, :], X_triangulated[2, :], c='b', label='Puntos Triangulados')
+
+    # Visualizar puntos de ground truth en rojo
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], c='r', marker='x', label='Ground Truth')
+    plot_utils.draw_camera(ax, T_w_c1, name='Cámara 1')
+    plot_utils.draw_camera(ax, T_w_c2, name='Cámara 2')
+
+    # Etiquetas y leyenda
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.legend()
+
+    plt.show()
+    mse = np.mean(np.sum((X_triangulated - X_w) ** 2, axis=0))
+    print(f"Error Cuadrático Medio (MSE): {mse}")
+    return mse
+
+
+def ej3_1(K1, K2, T_w_c1, T_w_c2, x1, n=np.array([0, 0, 1]), d=1.0):
+    """
+    APARTADO 3.1: Homography definition
+    """
+    R_w_c1 = T_w_c1[:3, :3]
+    R2 = T_w_c2[:3, :3]
+    t_w_c1 = T_w_c1[:3, 3]
+    t2 = T_w_c2[:3, 3]
+    # Calcular Homografía: H = K2 * (R2 - (t2 * n^T) / d) * K1^-1
+    H = K2 @ (R2 - (t2 @ n.T) / d) @ np.linalg.inv(K1)
+    print("Homografía:\n", H)
+    return H
+
+
+def ej3_2(H, x1):
+    """
+    APARTADO 3.2: Point transfer visualization
+    """
+    # Convertir los puntos en coordenadas homogéneas
+    
+    x2_h = H @ x1
+    x2 = x2_h[:2] / x2_h[2]
+    return x2
+
+
+def ej3_3(x1, x2):
+    """
+    APARTADO 3.3: Point transfer visualization
+    """
+    H, _ = cv2.findHomography(x1.T, x2.T, method=cv2.RANSAC)
+    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+
+    plt.figure(1)
+    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x1[0, :], x1[1, :], 'rx', markersize=10)
+    plt.title('Image 1 - Puntos en el suelo')
+    plt.draw()
+
+    plt.figure(2)
+    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x2_estimated[0, :], x2_estimated[1, :], 'bx', markersize=10, label='Proyección estimada')
+    plt.plot(x2[0, :], x2[1, :], 'rx', markersize=10, label='Proyección real')
+    plt.title('Image 2 - Proyección de puntos')
+    plt.legend()
+    plt.show()
+
+    return H
 
 if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
@@ -158,4 +234,13 @@ if __name__ == '__main__':
     x2 = np.loadtxt(DATA_PATH + 'x2Data.txt')
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
-    ej2_4(F, K_c, K_c, x1, x2)
+    H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, x1)
+
+    x1Floor = np.loadtxt(DATA_PATH + 'x1FloorData.txt')
+    x2Floor = np.loadtxt(DATA_PATH + 'x2FloorData.txt')
+
+    x2_estimated = ej3_2(H, x1Floor)
+    ej3_3(x1Floor, x2Floor)
+
+    X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False)
+    ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)

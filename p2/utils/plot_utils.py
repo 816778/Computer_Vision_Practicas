@@ -220,3 +220,25 @@ def plot_epipolar_lines(F, x1, img2, num_lines=5):
     plt.show()
 
 
+def draw_camera(ax, T, name='Camera'):
+    """
+    Dibuja la cámara en la visualización 3D.
+    """
+    # La posición de la cámara en coordenadas del mundo es la columna de traslación de T
+    camera_position = T[:3, 3]
+
+    # Dibujar el punto de la cámara
+    ax.scatter(camera_position[0], camera_position[1], camera_position[2], c='g', label=name, s=100)
+
+    # Dibujar los ejes de la cámara
+    scale = 0.5  # Escala para los ejes
+    x_axis = camera_position + scale * T[:3, 0]
+    y_axis = camera_position + scale * T[:3, 1]
+    z_axis = camera_position + scale * T[:3, 2]
+
+    # Dibujar líneas para los ejes
+    ax.plot([camera_position[0], x_axis[0]], [camera_position[1], x_axis[1]], [camera_position[2], x_axis[2]], color='r', label=name + ' X-axis')
+    ax.plot([camera_position[0], y_axis[0]], [camera_position[1], y_axis[1]], [camera_position[2], y_axis[2]], color='g', label=name + ' Y-axis')
+    ax.plot([camera_position[0], z_axis[0]], [camera_position[1], z_axis[1]], [camera_position[2], z_axis[2]], color='b', label=name + ' Z-axis')
+
+
