@@ -17,7 +17,7 @@ def ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False):
     la posición 3D de dicho punto en el espacio. 
     """
     # Convertir los puntos 2D en formato homogéneo
-    x1_h = np.vstack((x1, np.ones((1, x1.shape[1]))))  # Añadimos una fila de unos (puntos homogéneos)
+    x1_h = np.vstack((x1, np.ones((1, x1.shape[1])))) 
     x2_h = np.vstack((x2, np.ones((1, x2.shape[1]))))
 
     # Calcular las matrices de proyección
@@ -26,20 +26,31 @@ def ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False):
 
     # Triangular los puntos
     # Encontrar el punto 3D donde se intersectan los dos rayos
-    X_h = cv2.triangulatePoints(P1, P2, x1_h[:2], x2_h[:2])
-
-    # Convertir los puntos homogéneos a coordenadas 3D
-    X = X_h[:3] / X_h[3]  # Dividimos por la cuarta coordenada
+    X_h = utils.triangulate_points(P1, P2, x1_h, x2_h)
 
     if verbose:
-        print("Puntos 3D triangulados: \n", X)
-    
-        img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
-        img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+        fig3D = plt.figure(3)
+        ax = plt.axes(projection='3d', adjustable='box')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
 
-        plot_utils.createPlot()
-        plot_utils.points_3d(X, X_w)
-        plot_utils.plotAndClose()
+        # Dibujar los sistemas de referencia de las cámaras y del mundo
+        plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        plot_utils.drawRefSystem(ax, T_w_c1, '-', 'C1')
+        plot_utils.drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+        # Dibujar los puntos del mundo reales
+        # ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='o', label='Puntos Reales')
+
+        # Dibujar los puntos triangulados
+        ax.scatter(X_h[0, :], X_h[1, :], X_h[2, :], marker='x', c='b', label='Puntos Triangulados')
+        ax.legend()
+        xFakeBoundingBox = np.linspace(0, 4, 2)
+        yFakeBoundingBox = np.linspace(0, 4, 2)
+        zFakeBoundingBox = np.linspace(0, 4, 2)
+        plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+        plt.show()    
     
     return X_h
 
@@ -56,8 +67,6 @@ def ej2_1(F):
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
     # l2​ = F⋅p1
     l2 = np.dot(F, p1)
-
-    print(l2)
 
     plot_utils.createPlot(IMAGE_PATH + 'image1.png')
     x_coords = [p1[0]] 
@@ -152,9 +161,8 @@ def ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2):
     ax = fig.add_subplot(111, projection='3d')
 
     ax.scatter(X_triangulated[0, :], X_triangulated[1, :], X_triangulated[2, :], c='b', label='Puntos Triangulados')
-
-    # Visualizar puntos de ground truth en rojo
     ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], c='r', marker='x', label='Ground Truth')
+
     plot_utils.draw_camera(ax, T_w_c1, name='Cámara 1')
     plot_utils.draw_camera(ax, T_w_c2, name='Cámara 2')
 
@@ -163,24 +171,27 @@ def ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.legend()
-
     plt.show()
-    mse = np.mean(np.sum((X_triangulated - X_w) ** 2, axis=0))
-    print(f"Error Cuadrático Medio (MSE): {mse}")
-    return mse
+
+    rmse = utils.compute_rmse(X_triangulated, X_w[:3])
+    print("RMSE:", rmse)
 
 
-def ej3_1(K1, K2, T_w_c1, T_w_c2, x1, n=np.array([0, 0, 1]), d=1.0):
+def ej3_1(K1, K2, T_w_c1, T_w_c2, ec_plane):
     """
     APARTADO 3.1: Homography definition
     """
-    R_w_c1 = T_w_c1[:3, :3]
-    R2 = T_w_c2[:3, :3]
-    t_w_c1 = T_w_c1[:3, 3]
-    t2 = T_w_c2[:3, 3]
-    # Calcular Homografía: H = K2 * (R2 - (t2 * n^T) / d) * K1^-1
-    H = K2 @ (R2 - (t2 @ n.T) / d) @ np.linalg.inv(K1)
-    print("Homografía:\n", H)
+    n = ec_plane[:3].reshape(3, 1)
+    d = ec_plane[3]
+
+    T_c2_c1 = np.linalg.inv(T_w_c2) @ T_w_c1
+
+    t_c2_c1 = T_c2_c1[:3, 3].reshape(3, 1)
+    R_c2_c1 = T_c2_c1[:3, :3]
+
+    # Calcular la Homografía: H = K2 * (R_c2_c1 - (t_c2_c1 * n^T) / d) * K1^-1
+    H = K2 @ (R_c2_c1 - (t_c2_c1 @ n.T) / d) @ np.linalg.inv(K1)
+
     return H
 
 
@@ -188,10 +199,29 @@ def ej3_2(H, x1):
     """
     APARTADO 3.2: Point transfer visualization
     """
+
+    #H_inv = np.linalg.inv(H)
+
     # Convertir los puntos en coordenadas homogéneas
-    
     x2_h = H @ x1
     x2 = x2_h[:2] / x2_h[2]
+
+    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+
+    plt.figure(1)
+    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x1[0, :], x1[1, :], 'bx', markersize=10, label='Proyección real')
+    plt.title('Image 1 - Puntos en el suelo')
+    plt.draw()
+
+    plt.figure(2)
+    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x2[0, :], x2[1, :], 'rx', markersize=10, label='Proyección estimada')
+    plt.title('Image 2 - Proyección de puntos')
+    plt.legend()
+    plt.show()
+
     return x2
 
 
@@ -199,20 +229,19 @@ def ej3_3(x1, x2):
     """
     APARTADO 3.3: Point transfer visualization
     """
-    H, _ = cv2.findHomography(x1.T, x2.T, method=cv2.RANSAC)
+    H = utils.compute_homography(x1,x2)
     img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
 
     plt.figure(1)
     plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1[0, :], x1[1, :], 'rx', markersize=10)
+    plt.plot(x1[0, :], x1[1, :], 'bx', markersize=10, label='Proyección real')
     plt.title('Image 1 - Puntos en el suelo')
     plt.draw()
 
     plt.figure(2)
     plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2_estimated[0, :], x2_estimated[1, :], 'bx', markersize=10, label='Proyección estimada')
-    plt.plot(x2[0, :], x2[1, :], 'rx', markersize=10, label='Proyección real')
+    plt.plot(x2[0, :], x2[1, :], 'rx', markersize=10, label='Proyección estimada')
     plt.title('Image 2 - Proyección de puntos')
     plt.legend()
     plt.show()
@@ -234,13 +263,20 @@ if __name__ == '__main__':
     x2 = np.loadtxt(DATA_PATH + 'x2Data.txt')
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
-    H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, x1)
+
+    # ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
+    # ej2_1(F)
+    # ej2_2(T_w_c1, T_w_c2, K_c, x1)
+    # ej2_3(x1, x2)
+    # ej2_4(F, K_c, K_c, x1, x2)
+    # X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
+    # ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)
 
     x1Floor = np.loadtxt(DATA_PATH + 'x1FloorData.txt')
     x2Floor = np.loadtxt(DATA_PATH + 'x2FloorData.txt')
+    ec_plane = np.loadtxt(DATA_PATH + 'Pi_1.txt')
 
-    x2_estimated = ej3_2(H, x1Floor)
+    # H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, ec_plane)
+    # x2_estimated = ej3_2(H, x1Floor)
     ej3_3(x1Floor, x2Floor)
 
-    X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=False)
-    ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)

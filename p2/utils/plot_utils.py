@@ -102,7 +102,7 @@ def draw3DLine(ax, xIni, xEnd, strStyle, lColor, lWidth):
     ax.plot([np.squeeze(xIni[0]), np.squeeze(xEnd[0])], [np.squeeze(xIni[1]), np.squeeze(xEnd[1])], [np.squeeze(xIni[2]), np.squeeze(xEnd[2])],
             strStyle, color=lColor, linewidth=lWidth)
 
-def drawRefSystem(ax, T_w_c, strStyle, nameStr):
+def drawRefSystem(ax, T_w_c, strStyle, nameStr, scale=1.0):
     """
         Draw a reference system in a 3D plot: Red for X axis, Green for Y axis, and Blue for Z axis
     -input:
@@ -111,10 +111,11 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
         strStyle: lines style.
         nameStr: Name of the reference system.
     """
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 0:1], strStyle, 'r', 1)
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 1:2], strStyle, 'g', 1)
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
-    ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + scale * T_w_c[0:3, 0:1], strStyle, 'r', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + scale * T_w_c[0:3, 1:2], strStyle, 'g', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + scale * T_w_c[0:3, 2:3], strStyle, 'b', 1)
+    ax.text(np.squeeze(T_w_c[0, 3]+0.1), np.squeeze(T_w_c[1, 3]+0.1), np.squeeze(T_w_c[2, 3]+0.1), nameStr)
+
 
 
 def points_3d(X, X_w=None):
@@ -231,7 +232,7 @@ def draw_camera(ax, T, name='Camera'):
     ax.scatter(camera_position[0], camera_position[1], camera_position[2], c='g', label=name, s=100)
 
     # Dibujar los ejes de la cámara
-    scale = 0.5  # Escala para los ejes
+    scale = 1 # Escala para los ejes
     x_axis = camera_position + scale * T[:3, 0]
     y_axis = camera_position + scale * T[:3, 1]
     z_axis = camera_position + scale * T[:3, 2]
@@ -242,3 +243,25 @@ def draw_camera(ax, T, name='Camera'):
     ax.plot([camera_position[0], z_axis[0]], [camera_position[1], z_axis[1]], [camera_position[2], z_axis[2]], color='b', label=name + ' Z-axis')
 
 
+def capture_points(img):
+
+    points = []
+
+    # Mouse event callback function
+    def mouse_event(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print("Clicked at: ", x, y)
+
+            points.append((x, y))
+
+            cv2.circle(img, (x, y), 5, (0, 0, 255), -1)
+            cv2.imshow("Image", img)
+
+    # Set the mouse callback function
+    cv2.setMouseCallback("Image", mouse_event)
+
+    # Wait for the user to click on the image
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    return np.array(points)
