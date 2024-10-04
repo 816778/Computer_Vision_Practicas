@@ -182,7 +182,7 @@ def ej3_1(K1, K2, T_w_c1, T_w_c2, ec_plane):
     APARTADO 3.1: Homography definition
     """
     n = ec_plane[:3].reshape(3, 1)
-    d = ec_plane[3]
+    d = ec_plane[3] # d = abs(d) / np.linalg.norm(n)
 
     T_c2_c1 = np.linalg.inv(T_w_c2) @ T_w_c1
 

@@ -21,8 +21,8 @@ def compute_projection_matrix(K, T_w_c):
     R_w_c = T_w_c[0:3, 0:3]  # La rotación: parte superior izquierda (3x3)
     t_w_c = T_w_c[0:3, 3]    # La traslación: última columna (3x1)
     
-    # Rt = np.hstack((R_w_c, t_w_c.reshape(-1, 1)))
     Rt = ensamble_T(R_w_c, t_w_c)
+    # Rt = np.linalg.inv(T_w_c)
     
     # K*[R|t] para obtener la matriz de proyección
     P = K @ Rt[0:3, :]
@@ -50,11 +50,6 @@ def calculate_fundamental_matrix(T_w_c1, T_w_c2, K_c):
     """
     Calcula la matriz fundamental F a partir de las poses y la matriz intrínseca.
     """
-    # Extraer rotación y traslación
-    R_w_c1 = T_w_c1[:3, :3]  
-    t_w_c1 = T_w_c1[:3, 3]  
-    R_w_c2 = T_w_c2[:3, :3]  
-    t_w_c2 = T_w_c2[:3, 3] 
 
     # Calcular la rotación y traslación relativas entre las dos cámaras
     T_c2_c1 = np.linalg.inv(T_w_c2) @ T_w_c1
@@ -169,10 +164,10 @@ def triangulate_points(P1, P2, x1, x2):
 
 def compute_rmse(X_triangulated, X_w):
 
-    diff = X_triangulated - X_w
-
+    diff = X_triangulated - X_w # (3, num_coordenadas)
     # Calcular el RMSE
-    rmse = np.sqrt(np.mean(np.sum(diff ** 2, axis=0)))
+    # np.sum(diff ** 2, axis=0) (num_coordenadas)
+    rmse = np.sqrt(np.mean(np.sum(diff ** 2, axis=0))) # por filas
     return rmse
 
 
