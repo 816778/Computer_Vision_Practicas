@@ -72,8 +72,8 @@ if __name__ == '__main__':
     timestamp1 = '1403715282262142976'
     timestamp2 = '1403715413262142976'
 
-    path_image_1 = 'image1.png'
-    path_image_2 = 'image2.png'
+    path_image_1 = 'images/image1.png'
+    path_image_2 = 'images/image2.png'
 
     # Read images
     image_pers_1 = cv2.imread(path_image_1)
