@@ -60,6 +60,38 @@ def matchWith2NDRR(desc1, desc2, distRatio, minDist=100):
     
     return matches
 
+def matchEpipolar(x1, x2, F, minDist=100):
+    """
+    Nearest Neighbours Matching algorithm checking the Distance Ratio.
+    A match is accepted only if its distance is less than distRatio times
+    the distance to the second match.
+    -input:
+        desc1: descriptors from image 1 nDesc x 128
+        desc2: descriptors from image 2 nDesc x 128
+        distRatio:
+    -output:
+       matches: nMatches x 3 --> [[indexDesc1,indexDesc2,descriptorDistance],...]]
+    """
+    matches = []
+    for kDesc1 in range(x1.shape[1]):
+        x = np.array([x1[0, kDesc1], x1[1, kDesc1], 1]).reshape(3, 1)
+
+        # Compute the epipolar line
+        l = F @ x
+
+        # Compute the distance from the points in 2 to the line
+        d = lines_point_distance(l, x2)
+
+        # Sort by distance
+        indexSort = np.argsort(d)
+
+        if d[indexSort[0]] < minDist:
+            matches.append([kDesc1, d[indexSort[0]]])
+
+    # Add epipolar matches
+    
+    return matches
+
 
 def matchWith2NDRR_0(desc1, desc2, distRatio, minDist):
     """
@@ -240,7 +272,7 @@ def ransac_homography(matches, num_iterations, threshold):
         inliers_count = np.sum(inliers)
 
         # Mostrar los 4 puntos de la hipótesis actual
-        if i % 10 == 0:  # Mostrar cada 10 iteraciones
+        if i % 20 == 0:  # Mostrar cada 10 iteraciones
             display_matches(matches, inliers, src_points, dst_points, H, title=f"Iteration {i}")
 
         # Verificar si es la mejor hipótesis
@@ -254,3 +286,173 @@ def ransac_homography(matches, num_iterations, threshold):
     return best_homography, best_inliers_count
 
 
+
+def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/image2.png'):
+    if option == 0:
+        path = './results/image1_image2_matches.npz'
+        npz = np.load(path)
+
+        keypoints1 = npz['keypoints0'] 
+        keypoints2 = npz['keypoints1']  
+        matches = npz['matches']
+
+        valid_matches_idx = matches > -1
+        keypoints1_matched = keypoints1[valid_matches_idx]
+        keypoints2_matched = keypoints2[matches[valid_matches_idx]]
+
+        keypoints_cv1 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in keypoints1_matched]
+        keypoints_cv2 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in keypoints2_matched]
+
+        # Crear objetos DMatch con índices secuenciales
+        dMatchesList = [cv2.DMatch(_queryIdx=i, _trainIdx=i, _distance=0) for i in range(len(keypoints_cv1))]
+
+
+        # Convierte los emparejamientos a coordenadas (x, y)
+        srcPts = keypoints1_matched  # Ya es un array con coordenadas (x, y)
+        dstPts = keypoints2_matched
+        x1 = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
+        x2 = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
+
+        matched_points = np.hstack((x1, x2))
+        matched_points = np.hstack((srcPts, dstPts))
+    elif option == 1:
+        distRatio = 0.8
+        dMatchesList, keypoints1, keypoints2 = visualize_matches(path_image_1, path_image_2, distRatio)
+
+        print("Total de keypoints en la primera imagen:", len(keypoints1))
+        print("Total de keypoints en la segunda imagen:", len(keypoints2))
+
+        # Convierte los emparejamientos a coordenadas (x, y)
+        srcPts = np.float32([keypoints1[m.queryIdx].pt for m in dMatchesList]).reshape(len(dMatchesList), 2)
+        dstPts = np.float32([keypoints2[m.trainIdx].pt for m in dMatchesList]).reshape(len(dMatchesList), 2)
+        x1 = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
+        x2 = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
+
+        matched_points = np.hstack((x1, x2))
+        matched_points = np.hstack((srcPts, dstPts))
+
+    else:
+        matched_points = None
+
+    return matched_points
+
+
+def estimate_fundamental_8point(x1, x2):
+    """
+    Estima la matriz fundamental usando el método de los ocho puntos.
+    
+    Args:
+        x1: Puntos en la primera imagen, tamaño (3, N).
+        x2: Puntos en la segunda imagen, tamaño (3, N).
+        
+    Returns:
+        F: Matriz fundamental estimada de tamaño (3, 3).
+    """
+
+    if x1.shape[0] == 2:
+        x1 = np.vstack((x1, np.ones((1, x1.shape[1]))))
+    if x2.shape[0] == 2:
+        x2 = np.vstack((x2, np.ones((1, x2.shape[1]))))
+    assert x1.shape[1] >= 8, "Necesitas al menos 8 puntos para aplicar el método de los 8 puntos"
+    
+    # Normalización de las coordenadas
+    x1 = x1 / x1[2, :]
+    x2 = x2 / x2[2, :]
+
+    # Construir la matriz A
+    A = []
+    for i in range(x1.shape[1]):
+        x1_i = x1[0, i]
+        y1_i = x1[1, i]
+        x2_i = x2[0, i]
+        y2_i = x2[1, i]
+        A.append([x2_i * x1_i, x2_i * y1_i, x2_i,
+                  y2_i * x1_i, y2_i * y1_i, y2_i,
+                  x1_i, y1_i, 1])
+    
+    A = np.array(A)
+
+    # Resolver Af = 0 usando SVD
+    U, S, Vt = np.linalg.svd(A)
+    F = Vt[-1].reshape(3, 3)
+
+    # Aplicar la restricción de rango 2
+    U, S, Vt = np.linalg.svd(F)
+    S[2] = 0  # Forzar el último valor singular a 0
+    F = U @ np.diag(S) @ Vt
+
+    return F
+
+def line_point_distance(line, point):
+    """
+    Calcula la distancia entre una línea y un punto.
+    
+    Args:
+        line: Coeficientes de la línea, tamaño (3,).
+        point: Coordenadas del punto, tamaño (2,).
+        
+    Returns:
+        float: Distancia entre la línea y el punto.
+    """
+
+    a, b, c = line
+    x, y = point
+    return abs(a*x + b*y + c) / np.sqrt(a**2 + b**2)
+
+
+def lines_point_distance(line, points):
+    """
+    Calcula la distancia entre una línea y un punto.
+    
+    Args:
+        line: Coeficientes de la línea, tamaño (3,).
+        point: Coordenadas del punto, tamaño (2,).
+        
+    Returns:
+        float: Distancia entre la línea y el punto.
+    """
+
+    d = []
+
+    for point in points:
+        a, b, c = line
+        x, y = point
+        d.append(abs(a*x + b*y + c) / np.sqrt(a**2 + b**2))
+
+    return d
+
+
+def ransac_fundamental_matrix(matches, num_iterations, threshold):
+    best_F = None
+    best_inliers_count = 0
+    best_inliers = []
+
+    for _ in range(num_iterations):
+        # Seleccionar 8 puntos aleatorios
+        sample_idx = np.random.choice(matches.shape[0], 8, replace=False)
+        src_points = matches[sample_idx, :2].T
+        dst_points = matches[sample_idx, 2:4].T
+
+        # Calcular la matriz fundamental con 8 puntos seleccionados
+        F = estimate_fundamental_8point(src_points, dst_points)
+
+        # Calcular el error de transferencia para todos los emparejamientos
+        inliers = []
+        for i in range(matches.shape[0]):
+            x1 = np.append(matches[i, :2], 1)  # Punto en la primera imagen (homogéneo)
+            x2 = np.append(matches[i, 2:4], 1) # Punto en la segunda imagen (homogéneo)
+
+            l2 = F @ x1  # Línea epipolar en la segunda imagen
+            l2 /= np.sqrt(l2[0]**2 + l2[1]**2)  # Normalizar la línea
+            error = line_point_distance(l2, x2[:2])
+
+            if error < threshold:
+                inliers.append(i)
+
+        # Actualizar la mejor matriz fundamental
+        if len(inliers) > best_inliers_count:
+            best_F = F
+            best_inliers_count = len(inliers)
+            best_inliers = inliers
+
+    return best_F, best_inliers

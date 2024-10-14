@@ -101,11 +101,18 @@ def ej2_2(T_w_c1, T_w_c2, K_c, x1):
     F = K2^-T*E*K1^-1
     """
     F = utils.calculate_fundamental_matrix(T_w_c1, T_w_c2, K_c)
-    print("Matriz Fundamental (F): \n", F)
-    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
-
-    # Dibujar las líneas epipolares en la imagen 2
+    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+    
+    x_coords = [368, 101, 200, 500, 363]
+    y_coords = [390, 452, 247, 370, 112]
+    
+    assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
+    labels = [str(i+1) for i in range(len(x_coords))]
+    plot_utils.show_points_on_image(x_coords, y_coords, labels)
+    x_coords = np.array(x_coords)
+    y_coords = np.array(y_coords)
+    x1 = np.vstack((x_coords, y_coords))
     plot_utils.plot_epipolar_lines(F, x1, img2, num_lines=7)
     return F
 
@@ -135,22 +142,77 @@ def ej2_3(x1, x2):
     return F
 
 
+def ej2_4_1(P2, P1, x1, x2, verbose=True):
+    """
+    APARTADO 2.4.1: Fundamental matrix definition"
+    """
+    # l2​ = F⋅p1
+    # Matriz fundamental F: p2^T⋅F⋅p1 = 0
+    # p1 punto coordenadas homogéneas primera imagen
+    # p2 punto coordenadas homogéneas segunda imagen
+    """
+    F: e puede calcular a partir de las posiciones de las cámaras.
+    Se utiliza la matriz de esencialidad E
+    E = [t]R
+    F = K2^-T*E*K1^-1
+    """
+    x1_h = np.vstack((x1, np.ones((1, x1.shape[1])))) 
+    x2_h = np.vstack((x2, np.ones((1, x2.shape[1]))))
 
-def ej2_4(F, K1, K2, x1, x2):
+    # Triangular los puntos
+    # Encontrar el punto 3D donde se intersectan los dos rayos
+    X_h = utils.triangulate_points(P1, P2, x1_h, x2_h)
+
+    # print("Debug: X_h", X_h, "P1:", P1, "P2:", P2)
+
+    if verbose:
+        fig3D = plt.figure(3)
+        ax = plt.axes(projection='3d', adjustable='box')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        # Dibujar los sistemas de referencia de las cámaras y del mundo
+        plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        plot_utils.drawRefSystem(ax, T_w_c1, '-', 'C1')
+        plot_utils.drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+        # Dibujar los puntos del mundo reales
+        # ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='o', label='Puntos Reales')
+
+        # Dibujar los puntos triangulados
+        ax.scatter(X_h[0, :], X_h[1, :], X_h[2, :], marker='x', c='b', label='Puntos Triangulados')
+        ax.legend()
+        xFakeBoundingBox = np.linspace(0, 4, 2)
+        yFakeBoundingBox = np.linspace(0, 4, 2)
+        zFakeBoundingBox = np.linspace(0, 4, 2)
+        plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+        plt.show()    
+    
+    return X_h
+
+
+def ej2_4(P1, F, K1, K2, x1, x2, t_w_c1):
     """
     APARTADO 2.4: Pose estimation from two views
     """
     # Calcula la matriz esencial E a partir de la matriz fundamental F y las matrices intrínsecas K1 y K2.
-    E = K2.T @ F @ K1
-    print("Matriz esencial E:\n", E)
+    E_21 = K2.T @ F @ K1
+    #E_inv = np.linalg.inv(E)
+    
+    print("Matriz esencial E:\n", E_21)
 
     # Descomponer la matriz esencial E en 4 posibles soluciones
-    R1, R2, t, t_neg = utils.decompose_essential_matrix(E)
+    R1_21, R2_21, t_21, t_neg = utils.decompose_essential_matrix(E_21)
+    #R1_1, R2_1, t_1, t_neg = utils.decompose_essential_matrix(E_inv)
 
     # Seleccionar la solución correcta triangulando los puntos 3D
-    P2_correcta = utils.select_correct_pose(R1, R2, t, K1, K2, x1, x2)
-    print("Matriz de proyección correcta para la segunda cámara:\n", P2_correcta)
-    return P2_correcta
+    P2 = utils.select_correct_pose(P1, R1_21, R2_21, t_w_c1, K2, x1, x2)
+    # P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))
+
+    print("Matriz de proyección correcta para la segunda cámara:\n", P1)
+    print("Matriz de proyección correcta para la segunda cámara:\n", P2)
+    return P2
 
 
 def ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2):
@@ -264,19 +326,9 @@ if __name__ == '__main__':
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
 
-    ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
-    ej2_1(F)
-    ej2_2(T_w_c1, T_w_c2, K_c, x1)
-    ej2_3(x1, x2)
-    ej2_4(F, K_c, K_c, x1, x2)
-    X_triangulated = ej_1(x1, x2, K_c, T_w_c1, T_w_c2, X_w, verbose=True)
+    P1 = utils.compute_projection_matrix(K_c, T_w_c1)
+    P2 = ej2_4(P1, F, K_c, K_c, x1, x2, T_w_c1)
+    X_triangulated = ej2_4_1(P2, P1, x1, x2, verbose=True)
     ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)
 
-    x1Floor = np.loadtxt(DATA_PATH + 'x1FloorData.txt')
-    x2Floor = np.loadtxt(DATA_PATH + 'x2FloorData.txt')
-    ec_plane = np.loadtxt(DATA_PATH + 'Pi_1.txt')
-
-    H = ej3_1(K_c, K_c, T_w_c1, T_w_c2, ec_plane)
-    x2_estimated = ej3_2(H, x1Floor)
-    ej3_3(x1Floor, x2Floor)
 

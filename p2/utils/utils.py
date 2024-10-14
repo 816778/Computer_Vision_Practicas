@@ -171,13 +171,13 @@ def compute_rmse(X_triangulated, X_w):
     return rmse
 
 
-def select_correct_pose(R1, R2, t, K1, K2, x1, x2):
+def select_correct_pose(P1, R1, R2, t, K1, K2, x1, x2, t_w_c1):
     """
     Selecciona la correcta entre las cuatro posibles soluciones triangulando los puntos 3D y verificando
     que estén delante de las cámaras.
     """
-    # Matriz de proyección de la primera cámara
-    P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))
+
+    P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))  # Matriz de proyección de la
 
     # Posibles matrices de proyección para la segunda cámara
     P2_options = [
@@ -187,18 +187,17 @@ def select_correct_pose(R1, R2, t, K1, K2, x1, x2):
         K2 @ np.hstack((R2, -t.reshape(3, 1)))
     ]
 
-    # Para cada opción, triangula los puntos y verifica si están delante de las cámaras
+    best_P2 = None
     for i, P2 in enumerate(P2_options):
+        
+        # Triangular los puntos 3D
         X = triangulate_points(P1, P2, x1, x2)
 
-        # Verificar si los puntos triangulados están delante de ambas cámaras (Z > 0)
-        if np.all(X[2, :] > 0):
-            print(f"Solución correcta encontrada: Opción {i + 1}")
-            return P2
+        # Verificar Z positiva en ambas cámaras
+        X = t_w_c1 @ np.vstack((X, np.ones(X.shape[1])))
 
-    print("No se encontró una solución válida.")
-    return None
-
+        # Seleccionar la solución con el mayor número de puntos delante de ambas cámaras
+        return P"
 
 import numpy as np
 

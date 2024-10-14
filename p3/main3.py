@@ -20,23 +20,9 @@ import random
 import scipy.linalg as scAlg
 import utils.utils as utils
 import cv2
+import utils.plot_utils as plot_utils
 
-def drawLine(l,strFormat,lWidth):
-    """
-    Draw a line
-    -input:
-      l: image line in homogenous coordinates
-      strFormat: line format
-      lWidth: line width
-    -output: None
-    """
-    # p_l_y is the intersection of the line with the axis Y (x=0)
-    p_l_y = np.array([0, -l[2] / l[1]])
-    # p_l_x is the intersection point of the line with the axis X (y=0)
-    p_l_x = np.array([-l[2] / l[0], 0])
-    # Draw the line segment p_l_x to  p_l_y
-    plt.plot([p_l_y[0], p_l_x[0]], [p_l_y[1], p_l_x[1]], strFormat, linewidth=lWidth)
-
+IMAGE_PATH = 'images/'
 
 if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
@@ -51,12 +37,31 @@ if __name__ == '__main__':
     num_iterations = int(np.log(1 - P) / np.log(1 - (1 - e) ** s))
     threshold = 4 # En píxeles
 
+    num_iterations = 2000
+
+    img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
+
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
 
-    matched_points = utils.do_matches()
-    best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
-
     matched_points = utils.do_matches(option=1)
-    best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
+    F, _ = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
+    
+    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+
+    x_coords = [368, 101, 200, 500, 363]
+    y_coords = [390, 452, 247, 370, 112]
+    
+    assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
+    labels = [str(i+1) for i in range(len(x_coords))]
+    plot_utils.show_points_on_image(x_coords, y_coords, labels)
+
+    x_coords = np.array(x_coords)
+    y_coords = np.array(y_coords)
+    x1 = np.vstack((x_coords, y_coords))
+    plot_utils.plot_epipolar_lines(F, x1, img2)
+
+
+
 
