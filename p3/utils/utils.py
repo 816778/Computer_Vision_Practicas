@@ -147,6 +147,7 @@ def compute_homography(x1, x2):
     :param x2: Puntos en la segunda imagen, de forma (2xN) o (3xN) en coordenadas homogéneas.
     :return: Matriz de homografía 3x3 que mapea x1 a x2.
     """
+
     assert x1.shape[1] == x2.shape[1], "x1 y x2 deben tener el mismo número de puntos."
     assert x1.shape[0] == 2 or x1.shape[0] == 3, "Los puntos x1 deben tener forma 2xN o 3xN."
     assert x2.shape[0] == 2 or x2.shape[0] == 3, "Los puntos x2 deben tener forma 2xN o 3xN."
@@ -188,13 +189,21 @@ def display_matches(matches, inliers, src_points, dst_points, H, title="Matches"
     img1 = cv2.imread('images/image1.png')
     img2 = cv2.imread('images/image2.png')
     
-    inliers_idx = np.where(inliers)[0]
-    matches_inliers = [cv2.DMatch(i, i, 0) for i in inliers_idx]
+    inlier_points1 = matches[inliers, :2]  # Forma (n_inliers, 2)
+    inlier_points2 = matches[inliers, 2:4]  # Forma (n_inliers, 2)
 
+    # Crear KeyPoints para los puntos inliers
+    keypoints1 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in inlier_points1]
+    keypoints2 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in inlier_points2]
+
+    # Crear matches de acuerdo al índice secuencial
+    matches_inliers = [cv2.DMatch(_queryIdx=i, _trainIdx=i, _distance=0) for i in range(len(keypoints1))]
+
+    # Usar drawMatches con las nuevas listas de KeyPoints y Matches
     img_matches = cv2.drawMatches(
-        img1, [cv2.KeyPoint(p[0], p[1], 1) for p in matches[inliers, :2]],
-        img2, [cv2.KeyPoint(p[0], p[1], 1) for p in matches[inliers, 2:4]],
-        matches_inliers, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        img1, keypoints1, img2, keypoints2, matches_inliers, None,
+        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
 
     plt.figure(figsize=(10, 5))
     plt.imshow(img_matches)
@@ -208,14 +217,16 @@ def ransac_homography(matches, num_iterations, threshold):
     best_inliers = None
     n_points = 4  # Mínimo número de puntos para calcular la homografía
 
+    print(f"Shape of matches: {matches.shape}")
+
     for i in range(num_iterations):
         # Seleccionar 4 puntos aleatorios
         sample_idx = np.random.choice(matches.shape[0], n_points, replace=False)
-        src_points = matches[sample_idx, :2]
-        dst_points = matches[sample_idx, 2:4]
+        src_points = matches[sample_idx, :2].T
+        dst_points = matches[sample_idx, 2:4].T
 
         # Calcular homografía con los 4 puntos seleccionados
-        H, _ = cv2.findHomography(src_points, dst_points, 0)
+        H = compute_homography(src_points, dst_points)
 
         if H is None:
             continue

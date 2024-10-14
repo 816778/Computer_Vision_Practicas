@@ -58,6 +58,14 @@ if __name__ == '__main__':
 
     print("Total de keypoints en la primera imagen:", len(keypoints1))
     print("Total de keypoints en la segunda imagen:", len(keypoints2))
-    exit()
+
+    # Convierte los emparejamientos a coordenadas (x, y)
+    srcPts = np.float32([keypoints1[m.queryIdx].pt for m in dMatchesList]).reshape(len(dMatchesList), 2)
+    dstPts = np.float32([keypoints2[m.trainIdx].pt for m in dMatchesList]).reshape(len(dMatchesList), 2)
+    x1 = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
+    x2 = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
+
+    matched_points = np.hstack((x1, x2))
+    matched_points = np.hstack((srcPts, dstPts))
 
     best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
