@@ -192,7 +192,7 @@ def ej2_4_1(P2, P1, x1, x2, verbose=True):
     return X_h
 
 
-def ej2_4(P1, F, K1, K2, x1, x2, t_w_c1):
+def ej2_4(F, K1, K2, x1, x2, t_w_c1):
     """
     APARTADO 2.4: Pose estimation from two views
     """
@@ -203,16 +203,29 @@ def ej2_4(P1, F, K1, K2, x1, x2, t_w_c1):
     print("Matriz esencial E:\n", E_21)
 
     # Descomponer la matriz esencial E en 4 posibles soluciones
-    R1_21, R2_21, t_21, t_neg = utils.decompose_essential_matrix(E_21)
+    R1, R2, t, _ = utils.decompose_essential_matrix(E_21)
     #R1_1, R2_1, t_1, t_neg = utils.decompose_essential_matrix(E_inv)
 
     # Seleccionar la solución correcta triangulando los puntos 3D
-    P2 = utils.select_correct_pose(P1, R1_21, R2_21, t_w_c1, K2, x1, x2)
-    # P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))
+    R, t = utils.select_correct_pose(R1, R2, t, K1, K2, x1, x2)
 
-    print("Matriz de proyección correcta para la segunda cámara:\n", P1)
-    print("Matriz de proyección correcta para la segunda cámara:\n", P2)
-    return P2
+    print(R)
+    print(t)
+
+    X_3D = utils.triangulate_points_from_cameras(R, t, K1, x1, x2).T
+    if X_3D.shape[0] != 3:
+        X_3D = X_3D.T
+    
+    # Transformar los puntos triangulados al sistema de coordenadas global
+    X_3D_homogeneous = np.vstack([X_3D, np.ones((1, X_3D.shape[1]))])  # Convertir a coordenadas homogéneas
+    X_3D_transformed = t_w_c1 @ X_3D_homogeneous  # Aplicar la transformación global
+
+    print("Forma de t_w_c1:", t_w_c1.shape)
+    print("Forma de X_3D_homogeneous:", X_3D_homogeneous.shape)
+
+    return X_3D_transformed
+
+
 
 
 def ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2):
@@ -326,9 +339,7 @@ if __name__ == '__main__':
 
     F = np.loadtxt(DATA_PATH + 'F_21_test.txt')
 
-    P1 = utils.compute_projection_matrix(K_c, T_w_c1)
-    P2 = ej2_4(P1, F, K_c, K_c, x1, x2, T_w_c1)
-    X_triangulated = ej2_4_1(P2, P1, x1, x2, verbose=True)
-    ej2_5(X_triangulated, X_w, T_w_c1, T_w_c2)
-
+    triangulated_points = ej2_4(F, K_c, K_c, x1, x2, T_w_c1)
+    ej2_5(triangulated_points, X_w, T_w_c1, T_w_c2)
+    
 

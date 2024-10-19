@@ -131,6 +131,26 @@ def decompose_essential_matrix(E):
     t = U[:, 2]  # vector de traslación
     return R1, R2, t, -t
 
+
+def triangulate_points_from_cameras(R, t, K, pts1, pts2):
+    """
+    Triangulate points 3D, given two sets of points projected in 2D in two cameras.
+    Params:
+        R (np.ndarray): Rotation matrix between the cameras.
+        t (np.ndarray): Translation vector between the cameras.
+        K (np.ndarray): Intrinsic camera matrix.
+        pts1 (np.ndarray): Points in the first camera.
+        pts2 (np.ndarray): Points in the second camera.
+    Returns:
+        np.ndarray: Triangulated 3D points.
+    """
+
+    P1 = K @ np.hstack((np.eye(3), np.zeros((3, 1))))
+    P2 = K @ np.hstack((R, t.reshape(3, 1)))
+
+    return triangulate_points(P1, P2, pts1, pts2)
+
+
 def triangulate_points(P1, P2, x1, x2):
     """
     Triangular puntos 3D a partir de las matrices de proyección P1 y P2 y las correspondencias x1 y x2.
@@ -163,7 +183,7 @@ def triangulate_points(P1, P2, x1, x2):
 
 
 def compute_rmse(X_triangulated, X_w):
-
+    X_triangulated = X_triangulated[:3, :]
     diff = X_triangulated - X_w # (3, num_coordenadas)
     # Calcular el RMSE
     # np.sum(diff ** 2, axis=0) (num_coordenadas)
@@ -171,35 +191,66 @@ def compute_rmse(X_triangulated, X_w):
     return rmse
 
 
-def select_correct_pose(P1, R1, R2, t, K1, K2, x1, x2, t_w_c1):
+def is_valid_solution(R, t, K1, K2, pts1, pts2):
     """
-    Selecciona la correcta entre las cuatro posibles soluciones triangulando los puntos 3D y verificando
-    que estén delante de las cámaras.
+    Verifica si una solución (R, t) genera puntos 3D válidos (delante de ambas cámaras).
+    Params:
+        R (np.ndarray): Matriz de rotación.
+        t (np.ndarray): Vector de traslación.
+        K1 (np.ndarray): Matriz intrínseca de la primera cámara.
+        K2 (np.ndarray): Matriz intrínseca de la segunda cámara.
+        pts1 (np.ndarray): Puntos en la primera imagen.
+        pts2 (np.ndarray): Puntos en la segunda imagen.
+    
+    Returns:
+        bool: True si los puntos están delante de ambas cámaras, False en caso contrario.
     """
+    # Construcción de las matrices de proyección para ambas cámaras
+    P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))  # Cámara 1 en el origen
+    P2 = K2 @ np.hstack((R, t.reshape(3, 1)))  # Cámara 2 con rotación y traslación
+    
+    # Triangular los puntos 3D
+    pts_3d = triangulate_points(P1, P2, pts1, pts2)
+    if pts_3d.shape[0] == 3:
+        pts_3d = pts_3d.T
+    print("Forma de pts_3d:", pts_3d.shape)
 
-    P1 = K1 @ np.hstack((np.eye(3), np.zeros((3, 1))))  # Matriz de proyección de la
+    # Verificar que los puntos tengan la coordenada Z positiva (delante de ambas cámaras)
+    pts_cam1 = pts_3d[:, 2]  # Coordenada Z en la cámara 1
+    pts_cam2 = (R @ pts_3d.T + t.reshape(-1, 1))[2, :]  # Coordenada Z en la cámara 2
 
-    # Posibles matrices de proyección para la segunda cámara
-    P2_options = [
-        K2 @ np.hstack((R1, t.reshape(3, 1))),
-        K2 @ np.hstack((R1, -t.reshape(3, 1))),
-        K2 @ np.hstack((R2, t.reshape(3, 1))),
-        K2 @ np.hstack((R2, -t.reshape(3, 1)))
-    ]
+    return np.all(pts_cam1 > 0) and np.all(pts_cam2 > 0)
 
-    best_P2 = None
-    for i, P2 in enumerate(P2_options):
-        
-        # Triangular los puntos 3D
-        X = triangulate_points(P1, P2, x1, x2)
 
-        # Verificar Z positiva en ambas cámaras
-        X = t_w_c1 @ np.vstack((X, np.ones(X.shape[1])))
 
-        # Seleccionar la solución con el mayor número de puntos delante de ambas cámaras
-        return P"
 
-import numpy as np
+def select_correct_pose(R1, R2, t, K1, K2, pts1, pts2):
+    """
+    Selecciona la solución correcta de rotación y traslación que da como resultado puntos 3D
+    válidos, es decir, que están delante de ambas cámaras.
+
+    Params:
+        R1 (np.ndarray): Primera matriz de rotación.
+        R2 (np.ndarray): Segunda matriz de rotación.
+        t (np.ndarray): Vector de traslación.
+        K (np.ndarray): Matriz intrínseca de la cámara.
+        pts1 (np.ndarray): Puntos en la primera imagen.
+        pts2 (np.ndarray): Puntos en la segunda imagen.
+
+    Returns:
+        R_correct (np.ndarray): La rotación correcta.
+        t_correct (np.ndarray): La traslación correcta.
+    """
+    T_21_solutions = [(R1, t), (R1, -t), (R2, t), (R2, -t)]
+    
+    for i, (R, t_vec) in enumerate(T_21_solutions):
+        if is_valid_solution(R, t_vec, K1, K2, pts1, pts2):
+            print(f"Solución correcta: R{(i//2)+1}, t{'+' if i % 2 == 0 else '-'}")
+            return R, t_vec
+
+    # Si ninguna solución es válida, se puede manejar un caso por defecto.
+    raise ValueError("No se encontró una solución válida.")
+
 
 def compute_homography(x1, x2):
     """
