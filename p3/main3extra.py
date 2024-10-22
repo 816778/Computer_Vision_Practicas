@@ -45,12 +45,12 @@ if __name__ == '__main__':
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
 
-    matched_points, kp1, kp2 = utils.do_matches(option=1)
+    matched_points, kp1, kp2 = utils.do_matches(option=0)
     H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
     F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
     
     # Add extra matches
-    new_matches = utils.matchEpipolar(kp1, kp2, F, 10)
+    new_matches = utils.matchEpipolar(kp1, kp2, F, 3)
     print(new_matches.shape)
     #matched_points = np.vstack((matched_points, new_matches))
 
