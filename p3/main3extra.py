@@ -37,7 +37,7 @@ if __name__ == '__main__':
     num_iterations = int(np.log(1 - P) / np.log(1 - (1 - e) ** s))
     threshold = 4 # En píxeles
 
-    num_iterations = 4000
+    num_iterations = 1000
 
     img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
@@ -45,24 +45,32 @@ if __name__ == '__main__':
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
 
-    matched_points, kp1, kp2 = utils.do_matches(option=0)
+    matched_points, kp1, kp2 = utils.do_matches(option=1)
     H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
     F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
-    print(f"Matriz fundamental F found with {len(inliers)} inliers")
+    
+    # Add extra matches
+    new_matches = utils.matchEpipolar(kp1, kp2, F, 10)
+    print(new_matches.shape)
+    #matched_points = np.vstack((matched_points, new_matches))
 
     plot_utils.createPlot(IMAGE_PATH + 'image1.png')
-
-    x_coords = [368, 101, 200, 500, 363]
-    y_coords = [390, 452, 247, 370, 112]
     
-    assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
-    labels = [str(i+1) for i in range(len(x_coords))]
-    plot_utils.show_points_on_image(x_coords, y_coords, labels, block=False)
+    # Plot matches in both images
+    plot_utils.show_points_on_image(matched_points[:, 0], matched_points[:, 1], labels=None, block=False)
 
-    x_coords = np.array(x_coords)
-    y_coords = np.array(y_coords)
-    x1 = np.vstack((x_coords, y_coords))
-    plot_utils.plot_epipolar_lines(F, H, x1, img2)
+    plot_utils.createPlot(IMAGE_PATH + 'image2.png')
+    
+    # Dibujar los puntos en la imagen
+    plt.scatter(matched_points[:, 2], matched_points[:, 3], color='yellow', s=100, marker='x', label='Puntos')
+    plt.scatter(new_matches[:, 2], new_matches[:, 3], color='red', s=100, marker='x', label='Puntos')
+
+    # Mostrar el resultado
+    plt.title('Puntos proyectados en la imagen')
+    plt.axis('off')  # Ocultar los ejes
+    # Plot and continue
+    plt.show(block=True)    
+
 
 
 

@@ -34,7 +34,7 @@ def matchesListToIndexMatrix(dMatchesList):
     return matchesList
 
 
-def matchWith2NDRR(desc1, desc2, distRatio, minDist=100):
+def matchWith2NDRR(desc1, desc2, distRatio, maxDist=100):
     """
     Nearest Neighbours Matching algorithm checking the Distance Ratio.
     A match is accepted only if its distance is less than distRatio times
@@ -55,7 +55,7 @@ def matchWith2NDRR(desc1, desc2, distRatio, minDist=100):
         d1 = dist[indexSort[0]]  # Distancia al vecino más cercano
         d2 = dist[indexSort[1]] # Distancia al segundo vecino más cercano
 
-        if d1 < d2 * distRatio and d1 < minDist:
+        if d1 < d2 * distRatio and d1 < maxDist:
             matches.append([kDesc1, indexSort[0], d1])
     
     return matches
@@ -66,29 +66,33 @@ def matchEpipolar(x1, x2, F, minDist=100):
     A match is accepted only if its distance is less than distRatio times
     the distance to the second match.
     -input:
-        desc1: descriptors from image 1 nDesc x 128
-        desc2: descriptors from image 2 nDesc x 128
-        distRatio:
+        x1: Interest points in image 1 
+        x2: Interest points in image 2
     -output:
        matches: nMatches x 3 --> [[indexDesc1,indexDesc2,descriptorDistance],...]]
     """
-    matches = []
-    for kDesc1 in range(x1.shape[1]):
-        x = np.array([x1[0, kDesc1], x1[1, kDesc1], 1]).reshape(3, 1)
+    #print(x1)
+
+    matches = np.array([])
+    for p1 in range(x1.shape[0]):
+        x = np.array([x1[p1, 0], x1[p1, 1], 1]).reshape(3, 1)
 
         # Compute the epipolar line
         l = F @ x
 
         # Compute the distance from the points in 2 to the line
-        d = lines_point_distance(l, x2)
+        d = line_points_distance(l, x2)
 
         # Sort by distance
         indexSort = np.argsort(d)
 
         if d[indexSort[0]] < minDist:
-            matches.append([kDesc1, d[indexSort[0]]])
+            # Add pair x1, x2 to matches
+            match = np.array([x1[p1, 0], x1[p1, 1], x2[indexSort[0], 0], x2[indexSort[0], 1]])
+            matches = np.append(matches, match)
 
     # Add epipolar matches
+    matches = matches.reshape(-1, 4)
     
     return matches
 
@@ -110,7 +114,7 @@ def matchWith2NDRR_0(desc1, desc2, distRatio, minDist):
     for kDesc1 in range(nDesc1):
         dist = np.sqrt(np.sum((desc2 - desc1[kDesc1, :]) ** 2, axis=1))
         indexSort = np.argsort(dist)
-        if (dist[indexSort[0]] < minDist):
+        if (dist[indexSort[0]] < minDist and dist[indexSort[0]] < distRatio * dist[indexSort[1]]):
             matches.append([kDesc1, indexSort[0], dist[indexSort[0]]])
     return matches
 
@@ -142,9 +146,34 @@ def visualize_matches_with_threshold(path_image_1, path_image_2, minDist, distRa
     
     return dMatchesList, keypoints1, keypoints2
 
+def print_projected_with_homography(H, path_image_1, path_image_2, matches):
 
+    # Project points with homography
+    projected_points = H @ np.vstack((matches[:, :2].T, np.ones((1, matches.shape[0]))))
+    projected_points = projected_points / projected_points[2, :]
+    projected_points = projected_points[:2, :].T
 
-def visualize_matches(path_image_1, path_image_2, distRatio):
+    # Display the projected points over images
+    img1 = cv2.imread(path_image_1)
+    img2 = cv2.imread(path_image_2)
+    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+
+    fig, ax = plt.subplots(1, 2, figsize=(15, 15))
+    ax[0].imshow(img1)
+    ax[0].plot(matches[:, 0], matches[:, 1], 'ro', ms=3)
+    #ax[0].plot(projected_points[:, 0], projected_points[:, 1], 'bo')
+    ax[0].set_title("Image 1")
+
+    ax[1].imshow(img2)
+    ax[1].plot(matches[:, 2], matches[:, 3], 'ro', ms=3)
+    ax[1].plot(projected_points[:, 0], projected_points[:, 1], 'bo', ms=3)
+    ax[1].set_title("Image 2")
+
+    plt.legend(["Matched points", "Projected points"])
+    plt.show()
+
+def visualize_matches(path_image_1, path_image_2, distRatio, maxDist):
     image1 = cv2.imread(path_image_1)
     image2 = cv2.imread(path_image_2)
 
@@ -153,10 +182,10 @@ def visualize_matches(path_image_1, path_image_2, distRatio):
     keypoints1, descriptors1 = sift.detectAndCompute(image1, None)
     keypoints2, descriptors2 = sift.detectAndCompute(image2, None)
 
-    matchesList = matchWith2NDRR(descriptors1, descriptors2, distRatio=distRatio)
+    matchesList = matchWith2NDRR(descriptors1, descriptors2, distRatio=distRatio, maxDist=maxDist)
     dMatchesList = indexMatrixToMatchesList(matchesList)
     dMatchesList = sorted(dMatchesList, key=lambda x: x.distance)
-    
+
     # Dibujar los primeros 100 emparejamientos
     img_matched = cv2.drawMatches(
         image1, keypoints1, image2, keypoints2, dMatchesList[:100], None, 
@@ -272,8 +301,8 @@ def ransac_homography(matches, num_iterations, threshold):
         inliers_count = np.sum(inliers)
 
         # Mostrar los 4 puntos de la hipótesis actual
-        if i % 20 == 0:  # Mostrar cada 10 iteraciones
-            display_matches(matches, inliers, src_points, dst_points, H, title=f"Iteration {i}")
+        #if i % 20 == 0:  # Mostrar cada 20 iteraciones
+        #    display_matches(matches, inliers, src_points, dst_points, H, title=f"Iteration {i}")
 
         # Verificar si es la mejor hipótesis
         if inliers_count > best_inliers_count:
@@ -282,7 +311,9 @@ def ransac_homography(matches, num_iterations, threshold):
             best_inliers = inliers
 
     # Visualizar la mejor hipótesis
-    display_matches(matches, best_inliers, matches[best_inliers, :2], matches[best_inliers, 2:4], best_homography, title="Best Hypothesis")
+    #display_matches(matches, best_inliers, matches[best_inliers, :2], matches[best_inliers, 2:4], best_homography, title="Best Hypothesis")
+
+
     return best_homography, best_inliers_count
 
 
@@ -316,8 +347,9 @@ def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/
         matched_points = np.hstack((x1, x2))
         matched_points = np.hstack((srcPts, dstPts))
     elif option == 1:
-        distRatio = 0.8
-        dMatchesList, keypoints1, keypoints2 = visualize_matches(path_image_1, path_image_2, distRatio)
+        distRatio = 0.75
+        maxDist = 500
+        dMatchesList, keypoints1, keypoints2 = visualize_matches(path_image_1, path_image_2, distRatio, maxDist)
 
         print("Total de keypoints en la primera imagen:", len(keypoints1))
         print("Total de keypoints en la segunda imagen:", len(keypoints2))
@@ -334,7 +366,7 @@ def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/
     else:
         matched_points = None
 
-    return matched_points
+    return matched_points, srcPts, dstPts
 
 
 def estimate_fundamental_8point(x1, x2):
@@ -400,7 +432,7 @@ def line_point_distance(line, point):
     return abs(a*x + b*y + c) / np.sqrt(a**2 + b**2)
 
 
-def lines_point_distance(line, points):
+def line_points_distance(line, points):
     """
     Calcula la distancia entre una línea y un punto.
     
@@ -418,6 +450,9 @@ def lines_point_distance(line, points):
         a, b, c = line
         x, y = point
         d.append(abs(a*x + b*y + c) / np.sqrt(a**2 + b**2))
+
+    # Convert list of lists to list
+    d = [item for sublist in d for item in sublist]
 
     return d
 

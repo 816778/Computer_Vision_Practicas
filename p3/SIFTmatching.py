@@ -61,7 +61,7 @@ def matchWith2NDRR(desc1, desc2, distRatio, minDist):
     for kDesc1 in range(nDesc1):
         dist = np.sqrt(np.sum((desc2 - desc1[kDesc1, :]) ** 2, axis=1))
         indexSort = np.argsort(dist)
-        if (dist[indexSort[0]] < minDist):
+        if (dist[indexSort[0]] < minDist and dist[indexSort[0]] < distRatio * dist[indexSort[1]]):
             matches.append([kDesc1, indexSort[0], dist[indexSort[0]]])
     return matches
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     keypoints_sift_1, descriptors_1 = sift.detectAndCompute(image_pers_1, None)
     keypoints_sift_2, descriptors_2 = sift.detectAndCompute(image_pers_2, None)
 
-    distRatio = 0.8
+    distRatio = 0.7
     minDist = 500
     matchesList = matchWith2NDRR(descriptors_1, descriptors_2, distRatio, minDist)
     dMatchesList = indexMatrixToMatchesList(matchesList)

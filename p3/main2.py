@@ -50,6 +50,7 @@ if __name__ == '__main__':
 
     num_iterations = int(np.log(1 - P) / np.log(1 - (1 - e) ** s))
     threshold = 4 # En píxeles
+    num_iterations = 1000
 
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
@@ -57,6 +58,12 @@ if __name__ == '__main__':
     matched_points = utils.do_matches()
     best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
 
+    utils.print_projected_with_homography(best_H, path_image_1, path_image_2, matched_points)
+
+
+    
+
     matched_points = utils.do_matches(option=1)
     best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
 
+    utils.print_projected_with_homography(best_H, path_image_1, path_image_2, matched_points)
