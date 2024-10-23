@@ -330,7 +330,7 @@ def display_matches(matches, inliers, src_points, dst_points, H, title="Matches"
     plt.show()
 
 
-def ransac_homography(matches, num_iterations, threshold, display_interval=2000):
+def ransac_homography(matches, num_iterations, threshold, display_interval=20000):
     best_inliers_count = 0
     best_homography = None
     best_inliers = None

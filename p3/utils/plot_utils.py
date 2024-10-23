@@ -62,7 +62,7 @@ def draw_epipolar_lines(img1, img2, F, pts1, pts2):
 
 
 
-def plot_epipolar_lines(F, x1, img2):
+def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
     """
     Dibuja las líneas epipolares en la segunda imagen a partir de los puntos en la primera imagen.
     """
@@ -78,10 +78,10 @@ def plot_epipolar_lines(F, x1, img2):
         y_vals = -(l2[0] * x_vals + l2[2]) / l2[1]
         plt.plot(x_vals, y_vals, color='blue')
 
-    plt.title('Líneas Epipolares en la Imagen 2')
+    plt.title(title)
     plt.show()
 
-def plot_epipolar_lines(F, H, x1, img2):
+def plot_epipolar_lines(F, H, x1, img2, title='Epipolar lines'):
     """
     Dibuja las líneas epipolares en la segunda imagen a partir de los puntos en la primera imagen.
     """
@@ -104,7 +104,7 @@ def plot_epipolar_lines(F, H, x1, img2):
     x2 = x2 / x2[2, :]
     plt.scatter(x2[0], x2[1], color='red', s=50, marker='x', label='Puntos proyectados')
 
-    plt.title('Líneas Epipolares en la Imagen 2')
+    plt.title(title)
     plt.show()
 
 
@@ -119,7 +119,7 @@ def show_points_on_image(x_coords, y_coords, labels=None, block=True):
         labels (list, optional): Lista de etiquetas para los puntos. Si no se proporciona, no se etiquetan.
     """     
     # Dibujar los puntos en la imagen
-    plt.scatter(x_coords, y_coords, color='yellow', s=100, marker='x', label='Puntos')
+    plt.scatter(x_coords, y_coords, color='b', s=100, marker='x', label='Puntos')
     
     # Etiquetar los puntos si se proporcionan etiquetas
     if labels is not None:

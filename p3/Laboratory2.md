@@ -163,4 +163,80 @@ In both methods, the transferred points follow the grid structure well, but Supe
 
 ## 5. RANSAC fundamental matrix estimation
 
+`ransac_f_matrix`
+1. In each iteration, 8 random point correspondences (matches) are selected from the input matches.
+2. Using these 8 points, the fundamental matrix F is calculated (using an 8-point algorithm).
+3. For each match, the function calculates the epipolar line in the second image by multiplying the first image’s point with F
+4. It normalizes this epipolar line and calculates the distance between this line and the second image’s point (transfer error). 
+5. If the transfer error is below a given threshold, the point is considered an inlier.
+6. If the current iteration’s fundamental matrix has more inliers than the previous best, it updates the best matrix and inliers count.
+
+
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/5_initial_points.png" alt="Initial Points" width="400"/>
+        <figcaption>Initial Points</figcaption>
+    </figure>
+</div>
+
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/5_sitf_f.png" alt="Epipolar Lines SITF" width="400"/>
+        <figcaption>Epipolar Lines SITF</figcaption>
+    </figure>
+    <figure>
+        <img src="results/5_superglue_f.png" alt="Epipolar Lines Sup
+        erGlue" width="400"/>
+        <figcaption>Epipolar Lines SuperGlue</figcaption>
+    </figure>
+</div>
+
+
+NNDR SIFT shows a more dispersed set of epipolar lines, with the lines intersecting at various points. This could suggest that the estimated fundamental matrix has more noise, likely due to the higher number of less accurate correspondences.
+
+SuperGlue, on the other hand, presents more consistent and aligned epipolar lines, indicating a better estimation of the fundamental matrix with fewer outliers. The lines are less spread, suggesting a more accurate match set and thus better geometric consistency.
+
+
+
 ## 6. Guided matching using epipolar geometry
+
+1. Para cada punto en la primera imagen usar la matriz fundamental para proyectar su línea epipolar en la segunda imagen: `l = F * punto[i]`
+2. Para cada punto candidato en la segunda imagen, calcular su distancia a la línea epipolar
+3. Si la distancia es menor que un umbral, considerar punto como posible coincidencia
+
+
+
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/6_sitf_origen.png" alt="Initial Points SITF" width="400"/>
+        <figcaption>Initial Points SITF</figcaption>
+    </figure>
+    <figure>
+        <img src="results/6_sitf.png" alt="Guided matching SITF" width="400"/>
+        <figcaption>Guided matching SITF</figcaption>
+    </figure>
+</div>
+
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/6_superglue_origen.png" alt="Initial Points SuperGlue" width="400"/>
+        <figcaption>Initial Points SuperGlue</figcaption>
+    </figure>
+    <figure>
+        <img src="results/6_superglue.png" alt="Guided matching Sup
+        erGlue" width="400"/>
+        <figcaption>Guided matching SuperGlue</figcaption>
+    </figure>
+</div>
+
+
+### Observations
+
+In the images, we observe the results of feature matching using two approaches: **NNDR SIFT** and **SuperGlue**. 
+
+- **Blue markers** represent the original matching points between the two images.
+- **Yellow markers** indicate the initial matches detected by either **NNDR SIFT** or **SuperGlue**.
+- **Red markers** highlight new matches identified after applying the epipolar constraint, which helps refine the matches based on the fundamental matrix.
+
+- The **epipolar constraint** successfully identifies more inlier matches, reducing false positives.
+- **SuperGlue** produces more accurate initial matches, while **NNDR SIFT** identifies a higher number of matches, but with a greater need for refinement.

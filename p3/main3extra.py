@@ -44,32 +44,40 @@ if __name__ == '__main__':
 
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
-
-    matched_points, kp1, kp2 = utils.do_matches(option=0)
-    H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
-    F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
     
-    # Add extra matches
-    new_matches = utils.matchEpipolar(kp1, kp2, F, 3)
-    print(new_matches.shape)
-    #matched_points = np.vstack((matched_points, new_matches))
+    matched_points_superglue, kp1_sp, kp2_sp = utils.do_matches()
+    matched_points_nndr_sift, kp1_sitf, kps_sitf = utils.do_matches(option=1)
 
-    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
-    
-    # Plot matches in both images
-    plot_utils.show_points_on_image(matched_points[:, 0], matched_points[:, 1], labels=None, block=False)
+    matched_points_all = [
+        (matched_points_nndr_sift, kp1_sitf, kps_sitf, "NNDR SIFT Proyected Points"),
+        (matched_points_superglue, kp1_sp, kp2_sp, "SuperGlue Proyected Points")
+    ]
 
-    plot_utils.createPlot(IMAGE_PATH + 'image2.png')
-    
-    # Dibujar los puntos en la imagen
-    plt.scatter(matched_points[:, 2], matched_points[:, 3], color='yellow', s=100, marker='x', label='Puntos')
-    plt.scatter(new_matches[:, 2], new_matches[:, 3], color='red', s=100, marker='x', label='Puntos')
+    for matched_points, kp1, kp2, match_title in matched_points_all:
+        H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
+        F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
+        
+        # Add extra matches
+        new_matches = utils.matchEpipolar(kp1, kp2, F, 3)
+        print(new_matches.shape)
+        #matched_points = np.vstack((matched_points, new_matches))
 
-    # Mostrar el resultado
-    plt.title('Puntos proyectados en la imagen')
-    plt.axis('off')  # Ocultar los ejes
-    # Plot and continue
-    plt.show(block=True)    
+        plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+        
+        # Plot matches in both images
+        plot_utils.show_points_on_image(matched_points[:, 0], matched_points[:, 1], labels=None, block=False)
+
+        plot_utils.createPlot(IMAGE_PATH + 'image2.png')
+        
+        # Dibujar los puntos en la imagen
+        plt.scatter(matched_points[:, 2], matched_points[:, 3], color='yellow', s=100, marker='x', label='Puntos')
+        plt.scatter(new_matches[:, 2], new_matches[:, 3], color='red', s=100, marker='x', label='Puntos')
+
+        # Mostrar el resultado
+        plt.title(match_title)
+        plt.axis('off')  # Ocultar los ejes
+        # Plot and continue
+        plt.show(block=True)    
 
 
 

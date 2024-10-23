@@ -37,7 +37,7 @@ if __name__ == '__main__':
     num_iterations = int(np.log(1 - P) / np.log(1 - (1 - e) ** s))
     threshold = 4 # En píxeles
 
-    num_iterations = 4000
+    num_iterations = 10000
 
     img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
@@ -45,24 +45,32 @@ if __name__ == '__main__':
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
 
-    matched_points, kp1, kp2 = utils.do_matches(option=0)
-    H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
-    F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
-    print(f"Matriz fundamental F found with {len(inliers)} inliers")
+    matched_points_superglue, _, _ = utils.do_matches()
+    matched_points_nndr_sift, _, _ = utils.do_matches(option=1)
 
-    plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+    matched_points_all = [
+        (matched_points_nndr_sift, "NNDR SIFT Epipolar Lines"),
+        (matched_points_superglue, "SuperGlue Epipolar Lines")
+    ]
 
-    x_coords = [368, 101, 200, 500, 363]
-    y_coords = [390, 452, 247, 370, 112]
-    
-    assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
-    labels = [str(i+1) for i in range(len(x_coords))]
-    plot_utils.show_points_on_image(x_coords, y_coords, labels, block=False)
+    for matched_points, match_title in matched_points_all:
+        H, _ = utils.ransac_homography(matched_points, num_iterations, threshold)
+        F, inliers = utils.ransac_fundamental_matrix(matched_points, num_iterations, threshold)
+        print(f"Matriz fundamental F found with {len(inliers)} inliers")
 
-    x_coords = np.array(x_coords)
-    y_coords = np.array(y_coords)
-    x1 = np.vstack((x_coords, y_coords))
-    plot_utils.plot_epipolar_lines(F, H, x1, img2)
+        plot_utils.createPlot(IMAGE_PATH + 'image1.png')
+
+        x_coords = [368, 101, 200, 500, 363]
+        y_coords = [390, 452, 247, 370, 112]
+        
+        assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
+        labels = [str(i+1) for i in range(len(x_coords))]
+        plot_utils.show_points_on_image(x_coords, y_coords, labels, block=False)
+
+        x_coords = np.array(x_coords)
+        y_coords = np.array(y_coords)
+        x1 = np.vstack((x_coords, y_coords))
+        plot_utils.plot_epipolar_lines(F, H, x1, img2, match_title)
 
 
 
