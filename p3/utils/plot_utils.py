@@ -134,5 +134,51 @@ def show_points_on_image(x_coords, y_coords, labels=None, block=True):
 
 
 
+def transfer_points_with_homography(H, matched_points, path_image_1, path_image_2, title="Transferred Points"):
+    """
+    Transfer points from image 1 to image 2 using the homography H.
+    
+    :param H: Homography matrix
+    :param matched_points: Matched points between the two images (N x 4 matrix where first 2 cols are x,y in image1, last 2 cols are x,y in image2)
+    :param path_image_1: Path to image 1
+    :param path_image_2: Path to image 2
+    :param title: Title of the plot
+    """
+    # Read images
+    image1 = cv2.imread(path_image_1)
+    image2 = cv2.imread(path_image_2)
+    
+    # Get the source points (points from image 1)
+    src_points = matched_points[:, :2]
+
+    # Convert the points to homogeneous coordinates for applying the homography
+    src_points_hom = np.hstack([src_points, np.ones((src_points.shape[0], 1))])  # Convert to N x 3
+
+    # Apply the homography to transfer the points to image 2
+    projected_points_hom = H @ src_points_hom.T
+    projected_points_hom /= projected_points_hom[2, :]  # Normalize to homogeneous coordinates
+
+    # Extract the transferred points from homogeneous coordinates
+    projected_points = projected_points_hom[:2, :].T
+
+    # Visualize the points before and after the transformation
+    plt.figure(figsize=(10, 5))
+
+    # Show original image 1 with the keypoints
+    plt.subplot(1, 2, 1)
+    plt.imshow(cv2.cvtColor(image1, cv2.COLOR_BGR2RGB))
+    plt.scatter(src_points[:, 0], src_points[:, 1], marker='o', color='r', label='Image 1 Points')
+    plt.title(f'Image 1: Original Points')
+
+    # Show image 2 with the projected points
+    plt.subplot(1, 2, 2)
+    plt.imshow(cv2.cvtColor(image2, cv2.COLOR_BGR2RGB))
+    plt.scatter(projected_points[:, 0], projected_points[:, 1], marker='x', color='b', label='Projected Points')
+    plt.title(f'Image 2: Projected Points using Homography')
+
+    plt.suptitle(title)
+    plt.show()
+
+
 
 

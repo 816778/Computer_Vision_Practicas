@@ -55,15 +55,20 @@ if __name__ == '__main__':
     print("Número de iteraciones:", num_iterations)
     print("Umbral de error:", threshold)
 
-    matched_points = utils.do_matches()
-    best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
+    matched_points_superglue, _, _ = utils.do_matches()
+    matched_points_nndr_sift, _, _ = utils.do_matches(option=1)
 
-    utils.print_projected_with_homography(best_H, path_image_1, path_image_2, matched_points)
-
-
+    matched_points_all = [
+        (matched_points_nndr_sift, "NNDR SIFT Matches Homography"),
+        (matched_points_superglue, "SuperGlue Matches Homography")
+    ]
     
+    for matched_points, match_title in matched_points_all:
+      # Compute homography using RANSAC
+      best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
 
-    matched_points = utils.do_matches(option=1)
-    best_H, inliers_count = utils.ransac_homography(matched_points, num_iterations, threshold)
+      # Call the function with the title and matched points
+      utils.print_projected_with_homography(best_H, path_image_1, path_image_2, matched_points, title=match_title)
+      utils.print_projected_with_homography_2(best_H, path_image_1, path_image_2, matched_points)
+      print("#############################################################################")
 
-    utils.print_projected_with_homography(best_H, path_image_1, path_image_2, matched_points)

@@ -35,5 +35,11 @@ if __name__ == '__main__':
     plt.figure(figsize=(10, 5))
     plt.imshow(cv2.cvtColor(img_matches, cv2.COLOR_BGR2RGB))
     plt.title("Emparejamientos SuperGlue")
+    plt.subplots_adjust(
+        top=0.985,     # Border for top
+        bottom=0.015,  # Border for bottom
+        left=0.028,    # Border for left
+        right=0.992,   # Border for right
+    )
     plt.axis('off')
     plt.show()

@@ -141,12 +141,57 @@ def visualize_matches_with_threshold(path_image_1, path_image_2, minDist, distRa
     # Mostrar el resultado
     plt.imshow(img_matched, cmap='gray', vmin=0, vmax=255)
     plt.title(f"Emparejamientos con minDist = {minDist}")
+    plt.subplots_adjust(
+        top=0.985,     # Border for top
+        bottom=0.015,  # Border for bottom
+        left=0.028,    # Border for left
+        right=0.992,   # Border for right
+    )
     plt.draw()
     plt.waitforbuttonpress()
     
     return dMatchesList, keypoints1, keypoints2
 
-def print_projected_with_homography(H, path_image_1, path_image_2, matches):
+
+def print_projected_with_homography(H, path_image_1, path_image_2, matches, title='Matches projected using Homography'):
+    # Load the images
+    image1 = cv2.imread(path_image_1)
+    image2 = cv2.imread(path_image_2)
+
+    # Extract the matching points from matches (the first 2 columns are from image1, the last 2 are from image2)
+    keypoints1 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in matches[:, :2]]
+    keypoints2 = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in matches[:, 2:4]]
+
+    # Project points from image1 to image2 using the homography matrix
+    projected_points = cv2.perspectiveTransform(np.array([matches[:, :2]]), H)
+    projected_points = projected_points[0]  # Get rid of the extra dimension
+
+    # Convert the projected points into cv2.KeyPoint format to visualize with drawMatches
+    projected_keypoints = [cv2.KeyPoint(x=pt[0], y=pt[1], size=1) for pt in projected_points]
+
+    # Create matches between the original keypoints in image1 and the projected points in image2
+    dMatchesList = [cv2.DMatch(_queryIdx=i, _trainIdx=i, _distance=0) for i in range(len(keypoints1))]
+
+    # Draw matches between keypoints1 (from image1) and projected_keypoints (projected points in image2)
+    img_matches = cv2.drawMatches(
+        image1, keypoints1, image2, projected_keypoints, dMatchesList, None,
+        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+    )
+
+    # Show the result
+    plt.imshow(img_matches, cmap='gray')
+    plt.title(title)
+    plt.subplots_adjust(
+        top=0.985,     # Border for top
+        bottom=0.015,  # Border for bottom
+        left=0.028,    # Border for left
+        right=0.992,   # Border for right
+    )
+
+    plt.show()
+
+
+def print_projected_with_homography_2(H, path_image_1, path_image_2, matches):
 
     # Project points with homography
     projected_points = H @ np.vstack((matches[:, :2].T, np.ones((1, matches.shape[0]))))
@@ -170,10 +215,17 @@ def print_projected_with_homography(H, path_image_1, path_image_2, matches):
     ax[1].plot(projected_points[:, 0], projected_points[:, 1], 'bo', ms=3)
     ax[1].set_title("Image 2")
 
+    plt.subplots_adjust(
+        top=0.985,     # Border for top
+        bottom=0.015,  # Border for bottom
+        left=0.028,    # Border for left
+        right=0.992,   # Border for right
+    )
+
     plt.legend(["Matched points", "Projected points"])
     plt.show()
 
-def visualize_matches(path_image_1, path_image_2, distRatio, maxDist):
+def visualize_matches(path_image_1, path_image_2, distRatio, maxDist, draw=True):
     image1 = cv2.imread(path_image_1)
     image2 = cv2.imread(path_image_2)
 
@@ -191,12 +243,18 @@ def visualize_matches(path_image_1, path_image_2, distRatio, maxDist):
         image1, keypoints1, image2, keypoints2, dMatchesList[:100], None, 
         flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS and cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
     )
-    
-    # Mostrar el resultado
-    plt.imshow(img_matched, cmap='gray', vmin=0, vmax=255)
-    plt.title(f"Emparejamientos con distRatio = {distRatio}")
-    plt.draw()
-    plt.waitforbuttonpress()
+
+    if draw:
+        plt.imshow(img_matched, cmap='gray', vmin=0, vmax=255)
+        plt.title(f"Emparejamientos con distRatio = {distRatio}")
+        plt.subplots_adjust(
+            top=0.985,     # Border for top
+            bottom=0.015,  # Border for bottom
+            left=0.028,    # Border for left
+            right=0.992,   # Border for right
+        )
+        plt.draw()
+        plt.waitforbuttonpress()
     
     return dMatchesList, keypoints1, keypoints2  # Retornar las coincidencias para análisis posterior
 
@@ -272,7 +330,7 @@ def display_matches(matches, inliers, src_points, dst_points, H, title="Matches"
     plt.show()
 
 
-def ransac_homography(matches, num_iterations, threshold):
+def ransac_homography(matches, num_iterations, threshold, display_interval=2000):
     best_inliers_count = 0
     best_homography = None
     best_inliers = None
@@ -300,6 +358,9 @@ def ransac_homography(matches, num_iterations, threshold):
         inliers = errors < threshold
         inliers_count = np.sum(inliers)
 
+        if i == display_interval:
+            print_projected_with_homography(H, 'images/image1.png', 'images/image1.png', matches, title='Homography random')
+
         # Mostrar los 4 puntos de la hipótesis actual
         #if i % 20 == 0:  # Mostrar cada 20 iteraciones
         #    display_matches(matches, inliers, src_points, dst_points, H, title=f"Iteration {i}")
@@ -318,7 +379,7 @@ def ransac_homography(matches, num_iterations, threshold):
 
 
 
-def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/image2.png'):
+def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/image2.png', draw=False):
     if option == 0:
         path = './results/image1_image2_matches.npz'
         npz = np.load(path)
@@ -346,10 +407,11 @@ def do_matches(option=0, path_image_1='images/image1.png', path_image_2='images/
 
         matched_points = np.hstack((x1, x2))
         matched_points = np.hstack((srcPts, dstPts))
+
     elif option == 1:
         distRatio = 0.75
         maxDist = 500
-        dMatchesList, keypoints1, keypoints2 = visualize_matches(path_image_1, path_image_2, distRatio, maxDist)
+        dMatchesList, keypoints1, keypoints2 = visualize_matches(path_image_1, path_image_2, distRatio, maxDist, draw=draw)
 
         print("Total de keypoints en la primera imagen:", len(keypoints1))
         print("Total de keypoints en la segunda imagen:", len(keypoints2))
