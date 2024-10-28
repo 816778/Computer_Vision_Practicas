@@ -70,12 +70,16 @@ if __name__ == '__main__':
         plot_utils.createPlot(IMAGE_PATH + 'image2.png')
         
         # Dibujar los puntos en la imagen
-        plt.scatter(matched_points[:, 2], matched_points[:, 3], color='yellow', s=100, marker='x', label='Puntos')
-        plt.scatter(new_matches[:, 2], new_matches[:, 3], color='red', s=100, marker='x', label='Puntos')
+        plt.scatter(matched_points[:, 2], matched_points[:, 3], color='yellow', s=100, marker='x', label='Original')
+        plt.scatter(new_matches[:, 2], new_matches[:, 3], color='red', s=100, marker='x', label='Epipolar')
 
         # Mostrar el resultado
         plt.title(match_title)
         plt.axis('off')  # Ocultar los ejes
+
+        # Legend, yellow original matches, red new matches
+        plt.legend()
+
         # Plot and continue
         plt.show(block=True)    
 

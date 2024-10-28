@@ -60,7 +60,7 @@ def matchWith2NDRR(desc1, desc2, distRatio, maxDist=100):
     
     return matches
 
-def matchEpipolar(x1, x2, F, minDist=100):
+def matchEpipolar(x1, x2, F, minDist=100, ratio=0.8):
     """
     Nearest Neighbours Matching algorithm checking the Distance Ratio.
     A match is accepted only if its distance is less than distRatio times
@@ -86,7 +86,7 @@ def matchEpipolar(x1, x2, F, minDist=100):
         # Sort by distance
         indexSort = np.argsort(d)
 
-        if d[indexSort[0]] < minDist:
+        if d[indexSort[0]] < minDist and (ratio < 0 or (ratio > 0 and d[indexSort[0]] < ratio * d[indexSort[1]])):
             # Add pair x1, x2 to matches
             match = np.array([x1[p1, 0], x1[p1, 1], x2[indexSort[0], 0], x2[indexSort[0], 1]])
             matches = np.append(matches, match)
