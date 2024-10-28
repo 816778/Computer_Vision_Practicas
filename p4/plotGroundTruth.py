@@ -24,6 +24,7 @@ import csv
 import scipy as sc
 import scipy.optimize as scOptim
 import scipy.io as sio
+from scipy.optimize import least_squares
 
 def indexMatrixToMatchesList(matchesList):
     """
@@ -128,7 +129,7 @@ if __name__ == '__main__':
     T_wc2 = np.loadtxt('data/T_w_c2.txt')
     T_wc3 = np.loadtxt('data/T_w_c3.txt')
     K_c = np.loadtxt('data/K_c.txt')
-    X_w = np.loadtxt('X_w.txt')
+    X_w = np.loadtxt('data/X_w.txt')
 
     x1Data = np.loadtxt('data/x1Data.txt')
     x2Data = np.loadtxt('data/x2Data.txt')

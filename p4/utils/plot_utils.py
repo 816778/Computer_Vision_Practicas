@@ -99,3 +99,49 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 1:2], strStyle, 'g', 1)
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
+
+
+def plot_3D_scene(T_wc1, T_wc2, T_wc3, X_w):
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+    drawRefSystem(ax, T_wc1, '-', 'C1')
+    drawRefSystem(ax, T_wc2, '-', 'C2')
+    drawRefSystem(ax, T_wc3, '-', 'C3')
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
+    plotNumbered3DPoints(ax, X_w, 'r', 0.1)
+    print('Close the figures to continue.')
+    plt.show()
+    
+
+
+
+def visualize_matches(image1, image2, kp1, kp2, dMatchesList, title):
+    imgMatched = cv2.drawMatches(image1, kp1, image2, kp2, dMatchesList, None,
+                                 flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+    plt.figure()
+    plt.imshow(imgMatched)
+    plt.title(title)
+    print('Close the figures to continue.')
+    plt.show()
+    
+
+
+
+def visualize_projection(image, xData, xProj, title):
+    plt.figure()
+    plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+    plotResidual(xData, xProj, 'k-')
+    plt.plot(xProj[0, :], xProj[1, :], 'bo')
+    plt.plot(xData[0, :], xData[1, :], 'rx')
+    plotNumberedImagePoints(xData[0:2, :], 'r', 4)
+    plt.title(title)
+    print('Close the figures to continue.')
+    plt.show()
+    
+
+
