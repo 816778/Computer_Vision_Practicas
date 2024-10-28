@@ -47,7 +47,11 @@ if __name__ == '__main__':
 
     T_wc1, T_wc2, T_wc3, K_c, X_w, x1Data, x2Data, x3Data = load_data()
 
-    plot_utils.plot_3D_scene(T_wc1, T_wc2, T_wc3, X_w)
+    #plot_utils.plot_3D_scene(T_wc1, T_wc2, T_wc3, X_w)
+    
+    im1_pth = 'images/image1.png'
+    im2_pth = 'images/image2.png'
+    im3_pth = 'images/image3.png'
 
     image1 = cv2.imread('images/image1.png')
     image2 = cv2.imread('images/image2.png')
@@ -60,18 +64,36 @@ if __name__ == '__main__':
     matchesList12 = np.hstack((np.arange(x1Data.shape[1]).reshape(-1, 1),
                                np.arange(x2Data.shape[1]).reshape(-1, 1),
                                np.ones((x1Data.shape[1], 1))))
-    dMatchesList12 = utils.indexMatrixToMatchesList(matchesList12)
-
-    plot_utils.visualize_matches(image1, image2, kpCv1, kpCv2, dMatchesList12, "Matches between views 1 and 2")
-    plot_utils.visualize_matches(image1, image3, kpCv1, kpCv3, dMatchesList12, "Matches between views 1 and 3")
-
-    x1_p = utils.project_points(K_c, T_wc1, X_w)
-    x2_p = utils.project_points(K_c, T_wc2, X_w)
-    x3_p = utils.project_points(K_c, T_wc3, X_w)
-   
-   
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K_c, X_w, x1Data, x2Data, x3Data)
     
+    minDist = 100
+    distRatio = 0.85
+    dMatchesList12, keypoints1, keypoints2 = utils.visualize_matches_with_threshold(im1_pth, im2_pth, minDist, distRatio)
+    dMatchesList13, keypoints1, keypoints3 = utils.visualize_matches_with_threshold(im1_pth, im3_pth, minDist, distRatio)
+   
+    matchesList12 = utils.matchesListToIndexMatrix(dMatchesList12)
+    matchesList13 = utils.matchesListToIndexMatrix(dMatchesList13)
+
+    # Matched points in numpy from list of DMatches
+    srcPts = np.float32([kpCv1[m.queryIdx].pt for m in matchesList12]).reshape(len(matchesList12), 2)
+    dstPts = np.float32([kpCv2[m.trainIdx].pt for m in matchesList12]).reshape(len(matchesList12), 2)
+
+    # Matched points in homogeneous coordinates
+    x1 = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
+    x2 = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
+    print(x1.shape)
+
+    F = utils.estimate_fundamental_8point(x1, x2)
+
+    E_21 = K_c @ F @ K_c
+
+    # Descomponer la matriz esencial E en 4 posibles soluciones
+    R1, R2, t, _ = utils.decompose_essential_matrix(E_21)
+    # Seleccionar la solución correcta triangulando los puntos 3D
+    R, t = utils.select_correct_pose(R1, R2, t, K_c, K_c, x1, x2)
+
+
+    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K_c, X_w, x1Data, x2Data, x3Data)
+
     # Step 6: Visualize Optimized Projection
     x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
     x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
