@@ -128,8 +128,11 @@ if __name__ == "__main__":
 
     X_w = utils.triangulate_points(P1, P2, srcPts12, dstPts12)
 
+    x1 = srcPts12[1:3, :]
+    x2 = dstPts12[1:3, :]
+    x3 = dstPts13[1:3, :]
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1Data, x2Data, x3Data)
+    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
 
     # Step 6: Visualize Optimized Projection
     x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
