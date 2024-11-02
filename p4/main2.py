@@ -60,36 +60,33 @@ if __name__ == "__main__":
     image3 = cv2.imread(im3_pth)
 
     # Construct the matches
-    #kpCv1 = []
-    #kpCv2 = []
-    #kpCv3 = []
-    #for kPoint in range(x1Data.shape[1]):
-    #    kpCv1.append(cv2.KeyPoint(x1Data[0, kPoint], x1Data[1, kPoint],1))
-    #    kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
-    #    kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
-#
-    #matchesList12 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x2Data.shape[1],1)),
-    #                                    np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
-#
-    #matchesList13 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x3Data.shape[1],1)),
-    #                                    np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
-#
+    kpCv1 = []
+    kpCv2 = []
+    kpCv3 = []
+    for kPoint in range(x1Data.shape[1]):
+        kpCv1.append(cv2.KeyPoint(x1Data[0, kPoint], x1Data[1, kPoint],1))
+        kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
+        kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
+
+    matchesList12 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x2Data.shape[1],1)),
+                                        np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
+
+    matchesList13 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x3Data.shape[1],1)),
+                                        np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
+
     ##matchesList13 = matchesList12
-    #dMatchesList12 = utils.indexMatrixToMatchesList(matchesList12)
-    #dMatchesList13 = utils.indexMatrixToMatchesList(matchesList13)
+    dMatchesList12 = utils.indexMatrixToMatchesList(matchesList12)
+    dMatchesList13 = utils.indexMatrixToMatchesList(matchesList13)
 
     # Matched points in numpy from list of DMatches
-    #srcPts12 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList12])
-    #dstPts12 = np.float32([kpCv2[m.trainIdx].pt for m in dMatchesList12])
+    srcPts12 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList12])
+    dstPts12 = np.float32([kpCv2[m.trainIdx].pt for m in dMatchesList12])
 
-    #srcPts13 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList13])
-    #dstPts13 = np.float32([kpCv3[m.trainIdx].pt for m in dMatchesList12])
+    srcPts13 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList13])
+    dstPts13 = np.float32([kpCv3[m.trainIdx].pt for m in dMatchesList12])
 
-
-    x1 = np.vstack((x1Data, np.ones((1, x1Data.shape[1]))))
-    x2 = np.vstack((x2Data, np.ones((1, x1Data.shape[1]))))
-    matches12, srcPts12, dstPts12 = utils.do_matches(im1_pth, im2_pth, option=1)
-    matches13, srcPts13, dstPts13 = utils.do_matches(im1_pth, im3_pth, option=1)
+    #matches12, srcPts12, dstPts12 = utils.do_matches(im1_pth, im2_pth, option=1)
+    #matches13, srcPts13, dstPts13 = utils.do_matches(im1_pth, im3_pth, option=1)
    
     # Matched points in homogeneous coordinates
     srcPts12 = np.vstack((srcPts12.T, np.ones((1, srcPts12.shape[0]))))
@@ -99,13 +96,13 @@ if __name__ == "__main__":
     dstPts13 = np.vstack((dstPts13.T, np.ones((1, dstPts13.shape[0]))))
                          
 
-    #F12 = utils.estimate_fundamental_8point(srcPts12, dstPts12)
-    #F13 = utils.estimate_fundamental_8point(srcPts13, dstPts13)
+    F12 = utils.estimate_fundamental_8point(srcPts12, dstPts12)
+    F13 = utils.estimate_fundamental_8point(srcPts13, dstPts13)
 
-    num_iterations = 1000
-    threshold = 0.5
-    F12, _ = utils.ransac_fundamental_matrix(matches12, num_iterations, threshold)
-    F13, _ = utils.ransac_fundamental_matrix(matches13, num_iterations, threshold)
+    #num_iterations = 1000
+    #threshold = 0.5
+    #F12, _ = utils.ransac_fundamental_matrix(matches12, num_iterations, threshold)
+    #F13, _ = utils.ransac_fundamental_matrix(matches13, num_iterations, threshold)
 
     E_12 = K_c.T @ F12 @ K_c
     E_13 = K_c.T @ F13 @ K_c
@@ -119,7 +116,6 @@ if __name__ == "__main__":
     R13, t13 = utils.select_correct_pose(R13_1, R13_2, t13, K_c, K_c, srcPts13, dstPts13)
 
 
-
     T_wc1 = np.eye(4)
     T_wc2 = utils.ensamble_T(R12, t12)
     T_wc3 = utils.ensamble_T(R13, t13)
@@ -128,9 +124,9 @@ if __name__ == "__main__":
 
     X_w = utils.triangulate_points(P1, P2, srcPts12, dstPts12)
 
-    x1 = srcPts12[1:3, :]
-    x2 = dstPts12[1:3, :]
-    x3 = dstPts13[1:3, :]
+    x1 = x1Data
+    x2 = x2Data
+    x3 = x3Data
 
     T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
 
