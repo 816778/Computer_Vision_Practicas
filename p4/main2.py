@@ -87,7 +87,13 @@ if __name__ == "__main__":
 
     #matches12, srcPts12, dstPts12 = utils.do_matches(im1_pth, im2_pth, option=1)
     #matches13, srcPts13, dstPts13 = utils.do_matches(im1_pth, im3_pth, option=1)
-   
+
+    #num_iterations = 1000
+    #threshold = 0.5
+    #F12, _ = utils.ransac_fundamental_matrix(matches12, num_iterations, threshold)
+    #F13, _ = utils.ransac_fundamental_matrix(matches13, num_iterations, threshold)
+
+
     # Matched points in homogeneous coordinates
     srcPts12 = np.vstack((srcPts12.T, np.ones((1, srcPts12.shape[0]))))
     dstPts12 = np.vstack((dstPts12.T, np.ones((1, dstPts12.shape[0]))))
@@ -98,11 +104,6 @@ if __name__ == "__main__":
 
     F12 = utils.estimate_fundamental_8point(srcPts12, dstPts12)
     F13 = utils.estimate_fundamental_8point(srcPts13, dstPts13)
-
-    #num_iterations = 1000
-    #threshold = 0.5
-    #F12, _ = utils.ransac_fundamental_matrix(matches12, num_iterations, threshold)
-    #F13, _ = utils.ransac_fundamental_matrix(matches13, num_iterations, threshold)
 
     E_12 = K_c.T @ F12 @ K_c
     E_13 = K_c.T @ F13 @ K_c

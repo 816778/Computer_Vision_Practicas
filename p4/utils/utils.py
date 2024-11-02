@@ -284,10 +284,12 @@ def residual_bundle_adjustmentNormalRot(params, K, x1Data, x2Data, x3Data):
     x3_proj = project_points(K, T_wc3, X_w)
     
     residuals = np.hstack((
-        (x1_proj[:2, :] - x1Data).flatten(),
-        (x2_proj[:2, :] - x2Data).flatten(),
-        (x3_proj[:2, :] - x3Data).flatten()
+        ((x1_proj[:2, :] - x1Data)*(x1_proj[:2, :] - x1Data)).flatten(),
+        ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten(),
+        ((x3_proj[:2, :] - x3Data)*(x3_proj[:2, :] - x3Data)).flatten()
     ))
+
+    print("Residuals: ", residuals.mean())
 
     return residuals
 

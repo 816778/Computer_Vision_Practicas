@@ -213,7 +213,6 @@ def is_valid_solution(R, t, K1, K2, pts1, pts2):
     pts_3d = triangulate_points(P1, P2, pts1, pts2)
     if pts_3d.shape[0] == 3:
         pts_3d = pts_3d.T
-    print("Forma de pts_3d:", pts_3d.shape)
 
     # Verificar que los puntos tengan la coordenada Z positiva (delante de ambas cámaras)
     pts_cam1 = pts_3d[:, 2]  # Coordenada Z en la cámara 1

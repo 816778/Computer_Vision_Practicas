@@ -16,14 +16,11 @@ if __name__ == '__main__':
 
     distRatio = 0.8
     for minDist in [50, 100, 200, 500, 1000]:
-        break
         dMatchesList, keypoints1, keypoints2 = utils.visualize_matches_with_threshold(path_image_1, path_image_2, minDist, distRatio)
 
     for distRatio in [1, 0.8, 0.5, 0.25]:
-        break
         dMatchesList, keypoints1, keypoints2 = utils.visualize_matches(path_image_1, path_image_2, distRatio, 500)
     
-    exit()
     # Conversion from DMatches to Python list
     matchesList = utils.matchesListToIndexMatrix(dMatchesList)
 

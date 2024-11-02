@@ -37,7 +37,7 @@ if __name__ == '__main__':
     num_iterations = int(np.log(1 - P) / np.log(1 - (1 - e) ** s))
     threshold = 4 # En píxeles
 
-    num_iterations = 10000
+    num_iterations = 1000
 
     img1 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread(IMAGE_PATH + 'image2.png'), cv2.COLOR_BGR2RGB)
