@@ -8,7 +8,8 @@ import scipy as sc
 import scipy.optimize as scOptim
 import scipy.io as sio
 from scipy.spatial.transform import Rotation as R
-from scipy.linalg import expm
+from scipy.linalg import expm, logm
+
 
 import utils.utils as utils
 import utils.plot_utils as plot_utils
@@ -393,23 +394,17 @@ def run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K, X_w, x1Data, x2Data, x3Data):
     return T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt
 
 
-def skew_symmetric(v):
-    """Genera la matriz skew-symmetric de un vector."""
-    return np.array([
-        [0, -v[2], v[1]],
-        [v[2], 0, -v[0]],
-        [-v[1], v[0], 0]
-    ])
 
-def rotvec_to_rotmat(theta):
+def rotvec_to_rotmat(rvec):
     """Convierte un vector de rotación theta en una matriz de rotación."""
-    angle = np.linalg.norm(theta)
-    if angle == 0:
-        return np.eye(3)  # Sin rotación
-    axis = theta / angle
-    K = skew_symmetric(axis)
-    R = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * K @ K
-    return R
+    theta = np.linalg.norm(rvec)
+    if theta == 0:
+        return np.eye(3)
+    
+    axis = rvec / theta
+    skew_rvec = crossMatrix(axis)
+    R = np.eye(3) + np.sin(theta) * skew_rvec + (1 - np.cos(theta)) * (skew_rvec @ skew_rvec)
+    return R.astype(np.float64)
 
 def crossMatrix(x):
     """Genera la matriz skew-symmetric de un vector."""
@@ -421,7 +416,13 @@ def crossMatrix(x):
 
 def resBundleProjection(Op, x1Data, x2Data, K_c, nPoints):
     """
-    Compute the residuals for bundle adjustment with two views.
+    -input:
+        Op: Optimization parameters: this must include aparamtrization for T_21 (reference 1 seen from reference 2) in a proper way and for X1 (3D points in ref 1)
+        x1Data: (3xnPoints) 2D points on image 1 (homogeneous coordinates)
+        x2Data: (3xnPoints) 2D points on image 2 (homogeneous coordinates)
+        K_c: (3x3) Intrinsic calibration matrix nPoints: Number of points
+    -output:
+        res: residuals from the error between the 2D matched points and the projected points from the 3D points (2 equations/residuals per 2D point)
     """
     # Extraer los parámetros de rotación y traslación para T_21
     theta = Op[:3]  # Los primeros tres elementos para la rotación en so(3)
@@ -688,3 +689,190 @@ def do_matches(path_image_1='images/image1.png', path_image_2='images/image2.png
         matched_points = None
 
     return matched_points, srcPts, dstPts
+
+####################################################################################
+
+
+def create_match_lists(kpCv1, kpCv_other, x1Data, x_otherData, K_c):
+    """
+    Crea listas de coincidencias y convierte los puntos en coordenadas homogéneas.
+
+    Args:
+    - kpCv1: Lista de puntos clave (KeyPoint) en la primera imagen.
+    - kpCv_other: Lista de puntos clave (KeyPoint) en la segunda/tercera imagen.
+    - x1Data: Puntos observados en la primera imagen (2D).
+    - x_otherData: Puntos observados en la segunda/tercera imagen (2D).
+
+    Returns:
+    - srcPts_hom: Puntos fuente en coordenadas homogéneas.
+    - dstPts_hom: Puntos destino en coordenadas homogéneas.
+    """
+    # Crear lista de coincidencias (matches)
+    matchesList = np.hstack((
+        np.reshape(np.arange(0, x1Data.shape[1]), (x_otherData.shape[1], 1)),
+        np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),
+        np.ones((x1Data.shape[1], 1))
+    ))
+
+    dMatchesList = utils.indexMatrixToMatchesList(matchesList)
+
+    # Extraer puntos coincidentes en las dos vistas
+    srcPts = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList])
+    dstPts = np.float32([kpCv_other[m.trainIdx].pt for m in dMatchesList])
+
+    # Convertir a coordenadas homogéneas
+    srcPts = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
+    dstPts = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
+
+    F = estimate_fundamental_8point(srcPts, dstPts)
+
+    E = K_c.T @ F @ K_c
+
+    # Descomponer la matriz esencial E en 4 posibles soluciones
+    R12_1, R12_2, t12, _ = decompose_essential_matrix(E)
+
+    # Seleccionar la solución correcta triangulando los puntos 3D
+    R12, t12 = select_correct_pose(R12_1, R12_2, t12, K_c, K_c, srcPts, dstPts)
+
+    return srcPts, dstPts, R12, t12
+
+
+
+def resBundleProjection_2(Op, x1Data, x2Data, K_c, nPoints):
+    """
+    -input:
+        Op: Optimization parameters: this must include aparamtrization for T_21 (reference 1 seen from reference 2) in a proper way and for X1 (3D points in ref 1)
+        x1Data: (3xnPoints) 2D points on image 1 (homogeneous coordinates)
+        x2Data: (3xnPoints) 2D points on image 2 (homogeneous coordinates)
+        K_c: (3x3) Intrinsic calibration matrix 
+        nPoints: Number of points
+    -output:
+        res: residuals from the error between the 2D matched points and the projected points from the 3D points (2 equations/residuals per 2D point)
+    """
+    theta = Op[:3]
+    T = Op[3:6].reshape(3, 1)
+    X1 = Op[6:].reshape(nPoints, 3).T  # (3xnPoints)
+    
+    R = expm(crossMatrix(theta)) 
+
+    X2 = R @ X1 + T  # X2 en coordenadas de la cámara 2
+
+    x1_proj = K_c @ X1  # Proyección en la cámara 1
+    x2_proj = K_c @ X2  # Proyección en la cámara 2
+
+    # Convertir a coordenadas inhomogéneas 
+    x1_proj = x1_proj[:2, :] / x1_proj[2, :]
+    x2_proj = x2_proj[:2, :] / x2_proj[2, :]
+
+    # Calcular los residuales (diferencias entre puntos observados y proyectados)
+    res1 = (x1_proj - x1Data) ** 2  
+    res2 = (x2_proj - x2Data) ** 2
+    
+    # Concatenar los residuales en un solo vector
+    res = np.hstack((res1.ravel(), res2.ravel()))  # Cada punto contribuye con 2 residuales (x, y)
+
+    print("Residuals: ", res.mean())
+
+    return res
+
+
+
+def extract_theta_and_t_from_T(T_wc):
+    """
+    Extrae los parámetros theta (rotación) y t (traslación) de una matriz de transformación T_wc.
+    
+    Args:
+    - T_wc: Matriz de transformación 4x4 de la cámara en el mundo.
+    
+    Returns:
+    - theta: Vector de rotación de 3 elementos en so(3).
+    - t: Vector de traslación de 3 elementos.
+    """
+    # Extraer la rotación y traslación de T_wc
+    R_wc = T_wc[:3, :3]  # Matriz de rotación 3x3
+    t_wc = T_wc[:3, 3]   # Vector de traslación 3x1
+    
+    # Convertir la matriz de rotación R_wc a la representación theta (so(3))
+    theta_matrix = logm(R_wc)  # Calcular la matriz logarítmica de R_wc
+    theta = crossMatrixInv(theta_matrix)
+    
+    return theta, t_wc
+
+
+def construct_T_from_theta_and_t(theta, t):
+    """
+    Construye la matriz de transformación T_wc a partir de theta (rotación) y t (traslación).
+    
+    Args:
+    - theta: Vector de rotación de 3 elementos en so(3).
+    - t: Vector de traslación de 3 elementos.
+    
+    Returns:
+    - T_wc: Matriz de transformación 4x4 de la cámara en el mundo.
+    """
+    # Convertir theta (en so(3)) a la matriz de rotación R usando la exponencial de matrices
+    R_wc = expm(crossMatrix(theta)) 
+
+    # Crear la matriz de transformación T_wc de 4x4
+    T_wc = np.eye(4)
+    T_wc[:3, :3] = R_wc  # Colocar la matriz de rotación en T_wc
+    T_wc[:3, 3] = t.flatten()  # Colocar el vector de traslación en T_wc
+
+    return T_wc
+
+
+
+def residual_bundle_adjustment_multiple_views(params, K, x_data_list, num_cameras, num_points):
+    """
+    Calcula los residuales para un ajuste de bundle con múltiples vistas.
+    
+    - params: vector unidimensional con parámetros de rotación y traslación para las cámaras,
+              y coordenadas de los puntos 3D optimizados.
+    - K: matriz intrínseca de la cámara.
+    - x_data_list: lista de puntos 2D observados en cada cámara (ground truth).
+    - num_cameras: número de cámaras (vistas).
+    - num_points: número de puntos 3D.
+    """
+    
+    # Extraer los parámetros de cada cámara y los puntos 3D
+    # Cámara 1 no se optimiza, por lo que no tiene parámetros en 'params'
+    
+    camera_params = []
+    index = 0
+    
+    # Cámara 2: optimización con grados de libertad restringidos si es necesario
+    T_wc2 = params[index:index + 6]  # 3 para rotación, 3 para traslación
+    index += 6
+    camera_params.append(T_wc2)
+
+    # Cámaras adicionales (3 en adelante): 6 grados de libertad cada una
+    for _ in range(2, num_cameras):  # Desde la cámara 3 en adelante
+        T_wci = params[index:index + 6]  # 3 para rotación, 3 para traslación
+        index += 6
+        camera_params.append(T_wci)
+    
+    # Puntos 3D en el espacio mundial
+    X_w = params[index:].reshape((3, num_points))
+
+    # Inicializar lista de residuales
+    residuals = []
+
+    # Proyectar puntos y calcular residuales para cada cámara
+    for i, (T_wci, x_data) in enumerate(zip(camera_params, x_data_list)):
+        # Convertir el vector de rotación y traslación a una matriz de transformación
+        R = rotvec_to_rotmat(T_wci[:3])  # rotación
+        t = T_wci[3:].reshape((3, 1))    # traslación
+        
+        T_wci_matrix = np.eye(4)
+        T_wci_matrix[:3, :3] = R
+        T_wci_matrix[:3, 3] = t.flatten()
+
+        # Proyectar puntos 3D en la imagen de la cámara i+1
+        x_proj = project_points(K, T_wci_matrix, X_w)
+
+        # Calcular el error cuadrático de reproyección
+        reprojection_error = (x_proj[:2, :] - x_data) ** 2
+        residuals.append(reprojection_error.flatten())
+
+    # Concatenar todos los errores de reproyección en un vector unidimensional
+    return np.hstack(residuals)

@@ -144,4 +144,41 @@ def visualize_projection(image, xData, xProj, title):
     plt.show()
     
 
+##############################################################################
+def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title):
+    """
+    Visualiza la proyección de los puntos iniciales (no optimizados) y optimizados,
+    junto con sus errores en el mismo gráfico.
+    
+    Args:
+    - image: Imagen de fondo.
+    - xData: Puntos 2D observados en la imagen (ground truth).
+    - xProj_no_opt: Puntos proyectados antes de la optimización.
+    - xProj_opt: Puntos proyectados después de la optimización.
+    - title: Título del gráfico.
+    """
+    plt.figure()
+    plt.subplots_adjust(
+        top=0.97,     
+        bottom=0.055,  
+        left=0.125,    
+        right=0.9,  
+    )
+    plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+
+    plotResidual(xData, xProj_no_opt, 'k-')
+    plotResidual(xData, xProj_opt, 'k-')
+
+    plt.plot(xProj_no_opt[0, :], xProj_no_opt[1, :], 'go', label="No Optimizado")
+
+    plt.plot(xProj_opt[0, :], xProj_opt[1, :], 'bo', label="Optimizado")
+
+    plt.plot(xData[0, :], xData[1, :], 'rx', label="Puntos Observados")
+
+    plotNumberedImagePoints(xData[0:2, :], 'r', 4)
+
+    plt.title(title)
+    plt.legend()
+    print('Close the figures to continue.')
+    plt.show()
 
