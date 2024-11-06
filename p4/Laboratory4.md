@@ -28,67 +28,50 @@ El objetivo es minimizar el error de proyección entre:
 - La posición observada de los puntos 2D en las imágenes (datos reales).
 - La posición proyectada de esos mismos puntos, calculada a partir de su posición 3D y la pose de la cámara.
 
-### 2.2 Rotación con Parámetros en so(3)
-`θ = (θ1, θ2, θ3).T`: Describe la rotación en términos de una rotación alrededor del eje definido por un vector unitario u y un ángulo `||θ||`
-Matriz antisimétrica `[θ]x` decribe esta rotación en el espacio tridimensional
+#### Implementaciones
 
-```
-            0   -θ3   θ2
-[θ]x =      θ    0   -θ1
-            -θ2  θ1   0
-```
-
-`R = Exp([θ]x)`, permite convertir el vector 𝜃 en una matriz de rotación 𝑅
-
-`[θ]x = log(R)`
-
+Difieren en la manera en que representan y optimizan las rotaciones de las cámaras, lo cual tiene implicaciones importantes en términos de estabilidad numérica y eficiencia. 
 
 ```python
-def resBundleProjection(Op, x1Data, x2Data, K_c, nPoints):
-"""
--input:
-    Op: Optimization parameters: this must include aparamtrization for T_21 (reference 1 seen from reference 2) in a proper way and for X1 (3D points in ref 1)
-    x1Data: (3xnPoints) 2D points on image 1 (homogeneous coordinates)
-    x2Data: (3xnPoints) 2D points on image 2 (homogeneous coordinates)
-    K_c: (3x3) Intrinsic calibration matrix nPoints: Number of points
--output:
-    res: residuals from the error between the 2D matched points and the projected points from the 3D points (2 equations/residuals per 2D point)
-"""
+def run_bundle_adjustment_multi_view(T_wc_list, K, X_w, xData_list):
 ```
-x1Data originalmente se encuntran en la referencia de la cámara 1
-Para transformar estos puntos a la referencia de la cámara 2: `X2=R * x1Data + T`
+En esta implementación, cada matriz de transformación de cada cámara (excepto la primera, que se toma como referencia y se mantiene fija) se representa y optimiza directamente como una matriz T_xc (3x4). Es decir, cada matriz T_wc se representa por 12 paŕametros aplanados (9) de rotación y 3 de traslación
 
-1. Extraer parámetros de rotación y traslación de Op
-2. Calcular la matriz de rotación R usando theta y la exponencial de matrices
-3. Proyectar los puntos 3D en las imágenes 1 y 2
-4. Calcular los residuales
+Desventajas:
+- La rotación 3x3 tiene 9 valores, pero solo 3 grados de libertad. Optimizar los 9 elementos de R es redundante
 
-### 2.1 Bundle adjustment from two views
+```python
+def run_bundle_adjustment_multi_view_2(T_wc_list, K, X_w, xData_list):
+```
+En esta implementación, se utiliza una parametrización alternativa para las rotaciones basada en el vector de rotación θ, que es un vector en el espacio so(3) de tres dimensiones.
 
-**¿Qué hay que hacer?**
-1. Solución Inicial de la Matriz Esencial
-2. Implementar el Bundle Adjustment Usando least_squares
-3. Visualizar los Resultados 3D y Compararlos con el Ground Truth (resultados sin optimizar y optimizados)
+Rotación se representa como vector `θ = (θ1, θ2, θ3)`
 
-<div style="display: flex; justify-content: space-around;">
-    <figure>
-        <img src="results/2_1comparation_1.png" alt="Image 1" width="400"/>
-        <figcaption>Image 1</figcaption>
-    </figure>
-    <figure>
-        <img src="results/2_1comparation_2.png" alt="Image 2" width="400"/>
-        <figcaption>Image 2</figcaption>
-    </figure>
-</div>
+`R=exp([θ]x)`
 
-<div style="display: flex; justify-content: space-around;">
-    <figure>
-        <img src="results/2_1comparation_3.png" alt="Image 3" width="400"/>
-        <figcaption>Image 3</figcaption>
-    </figure>
-</div>
+`[θ]x`: Matriz antisimétrica de `θ`
 
-Nuestra aproximación se basa en 
+Para convertir de R a θ: `[θ]x=log(R)`
+
+```python
+theta = crossMatrixInv(logm(R_wc)) # Convierte R_wc de cada cámara (T_wc) a theta
+
+theta_t_flat = np.hstack([np.hstack([theta, t]) for theta, t in theta_t_flat_list])
+
+result = scOptim.least_squares(residual_bundle_adjustment_multi_view_2, initial_params, args=(K, T_wc_list[0], xData_list), method='lm')
+```
+
+```python
+def residual_bundle_adjustment_multi_view_2(params, K, T_wc1, xData_list):
+    # Convierte vector θ optimizado en matriz de rotación R
+    R_opt = expm(crossMatrix(theta_opt))
+    # combinamos R y t ara formar la matriz de transformación T_wc
+```
+
+```bash
+Tiempo empleado en run_bundle_adjustment_multi_view_2: 9.10 segundos
+Tiempo empleado en run_bundle_adjustment_multi_view: 11.71 segundos
+```
 
 ## 3. Perspective-N-Point pose estimation of camera three
 
@@ -113,4 +96,22 @@ Una vez obtenidos rvec (vector de rotación) y tvec
 
 ## 4. Bundle adjustment from 3 views
 
- 
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/2_1comparation_1.png" alt="Image 1" width="400"/>
+        <figcaption>Image 1</figcaption>
+    </figure>
+    <figure>
+        <img src="results/2_1comparation_2.png" alt="Image 2" width="400"/>
+        <figcaption>Image 2</figcaption>
+    </figure>
+</div>
+
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/2_1comparation_3.png" alt="Image 3" width="400"/>
+        <figcaption>Image 3</figcaption>
+    </figure>
+</div>
+
+

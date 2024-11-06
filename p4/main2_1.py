@@ -28,6 +28,7 @@ import scipy.io as sio
 import utils.utils as utils
 import utils.plot_utils as plot_utils
 from scipy.linalg import expm, logm
+import time
 
 work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p4/"
 work_dir = ""
@@ -84,50 +85,53 @@ if __name__ == "__main__":
     x2_no_opt = utils.project_points(K_c, T_wc2, X_w)
     x3_no_opt = utils.project_points(K_c, T_wc3, X_w)
     
-    ejecucion_R = False
+    ejecucion_R = True
 
     #######################
     if ejecucion_R:
-        theta_init, t_init = utils.extract_theta_and_t_from_T(T_wc2)
-        print(f"Theta inicial: {theta_init}.\nt_init: {t_init}")
-        print(f"T_wc2: {T_wc2}")
+        T_wc_list = [T_wc1, T_wc2, T_wc3]
+        theta_t_list = utils.convert_T_wc_to_theta_t_list(T_wc_list)
+        xData_list = [x1Data, x2Data, x3Data]
+        theta_t_opt_list, X_w_opt = utils.resBundleProjection_2(theta_t_list, K_c, X_w, xData_list)
 
-        print(f"X_w shape: {X_w.shape}")
-        print(f"X data shape: {x1Data.shape}")
+        projected_points_list = utils.project_points_multi_view(theta_t_opt_list, K_c, X_w_opt)
+        x1_p_opt, x2_p_opt, x3_p_opt = projected_points_list
 
-        X_w_init = X_w.flatten()
-        initial_params = np.hstack((theta_init, t_init, X_w_init))
+        plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_p_opt, 'Image 1')
+        plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_p_opt, 'Image 2')
+        plot_utils.visualize_projection_2(image3, x3Data, x3_no_opt, x3_p_opt, 'Image 3')
 
-        args = (x1Data, x2Data, K_c, x2Data.shape[1])
-
-        result = scOptim.least_squares(
-            utils.resBundleProjection_2,
-            initial_params,
-            args=args,
-            method='lm'  # Método Levenberg-Marquardt
-        )
-
-        T_wc2_opt = utils.construct_T_from_theta_and_t(result.x[:3], result.x[3:6].reshape(3, 1))
-        print(f"T_wc2_opt: {T_wc2_opt}")
-
-        X_w_opt = result.x[6:].reshape(3, -1)
-
-        x1_proj_opt = utils.project_points(K_c, T_wc1, X_w_opt)
-        x2_proj_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
-        x3_proj_opt = utils.project_points(K_c, T_wc3, X_w_opt)
-
-        plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_proj_opt, 'Image 1')
-        plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_proj_opt, 'Image 2')
+        
 
     else:
         x1 = x1Data
         x2 = x2Data
         x3 = x3Data
-        T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
+        using_2_views = False
+        if using_2_views:
+            T_wc1_opt, T_wc2_opt, X_w_opt = utils.run_bundle_adjustment_two_views(T_wc1, T_wc2, K_c, X_w, x1, x2)
+            T_wc1_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustment_two_views(T_wc1_opt, T_wc3, K_c, X_w_opt, x1, x3)
+            print("TWO-VIEW")
+        else:
+            start_time = time.time()
+            T_wc_opt_list, X_w_opt = utils.run_bundle_adjustment_multi_view_2([T_wc1, T_wc2, T_wc3], K_c, X_w, [x1Data, x2Data, x3Data])
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            T_wc1_opt, T_wc2_opt, T_wc3_opt = T_wc_opt_list
+            print("MULTI-VIEW")
+
+            start_time = time.time()
+            T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
+            end_time = time.time()
+            elapsed_time_2 = end_time - start_time
+            print(f"Tiempo empleado en run_bundle_adjustment_multi_view_2: {elapsed_time:.2f} segundos")
+            print(f"Tiempo empleado en run_bundle_adjustment_multi_view: {elapsed_time_2:.2f} segundos")
+
 
         x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
         x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
         x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
+        
 
         plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_p_opt, 'Image 1')
         plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_p_opt, 'Image 2')

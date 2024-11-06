@@ -166,7 +166,7 @@ def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title):
     )
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
 
-    plotResidual(xData, xProj_no_opt, 'k-')
+    plotResidual(xData, xProj_no_opt, 'g-')
     plotResidual(xData, xProj_opt, 'k-')
 
     plt.plot(xProj_no_opt[0, :], xProj_no_opt[1, :], 'go', label="No Optimizado")
