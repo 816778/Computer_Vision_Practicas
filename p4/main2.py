@@ -129,7 +129,7 @@ if __name__ == "__main__":
     x2 = x2Data
     x3 = x3Data
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
+    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
 
     # Step 6: Visualize Optimized Projection
     x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)

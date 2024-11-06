@@ -176,7 +176,7 @@ def project_points_exp_rot(K, T_w_c, rot, X_w):
 
     # Rt = np.linalg.inv(T_w_c)
     
-    R_w_c = sc.linalg.expm(crossMatrix(rot))
+    R_w_c = expm(crossMatrix(rot))
 
     T = ensamble_T(R_w_c, T_w_c)    
     x_proj = project_points(K, T, X_w)
@@ -312,6 +312,8 @@ def residual_bundle_adjustment(params, K, x1Data, x2Data, x3Data):
         ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten(),
         ((x3_proj[:2, :] - x3Data)*(x3_proj[:2, :] - x3Data)).flatten()
     ))
+
+    print("Residuals: ", residuals.mean())
 
     return residuals
 
@@ -457,7 +459,7 @@ def resBundleProjection(Op, x1Data, x2Data, K_c, nPoints):
     return residuals
 
 
-def resBundleProjectionThreeViews(Op, x1Data, x2Data, x3Data, K_c, nPoints):
+def resBundleProjectionThreeViews(Op, K_c, x1Data, x2Data, x3Data):
     """
     -input:
     Op: Vector de optimización que incluye una parametrización para T_21 y T_31, 
@@ -466,10 +468,11 @@ def resBundleProjectionThreeViews(Op, x1Data, x2Data, x3Data, K_c, nPoints):
     x2Data: Puntos observados en la imagen 2 (coordenadas homogéneas 3xnPoints).
     x3Data: Puntos observados en la imagen 3 (coordenadas homogéneas 3xnPoints).
     K_c: Matriz intrínseca de calibración (3x3).
-    nPoints: Número de puntos 3D.
     -output:
     res: Residuales (errores de proyección) entre los puntos observados y proyectados.
     """
+
+    nPoints = x1Data.shape[1]
 
     # Extrae rotación y traslación para T_21 y T_31
     theta_21 = Op[:3]       # Rotación para T_21 en so(3)
