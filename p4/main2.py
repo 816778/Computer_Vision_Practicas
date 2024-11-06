@@ -29,7 +29,7 @@ import utils.utils as utils
 import utils.plot_utils as plot_utils
 
 work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p4/"
-
+work_dir = ""
 
 def load_data():
     T_wc1 = np.loadtxt(work_dir+"data/T_w_c1.txt")
@@ -68,54 +68,8 @@ if __name__ == "__main__":
         kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
         kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
 
-    matchesList12 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x2Data.shape[1],1)),
-                                        np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
-
-    matchesList13 = np.hstack((np.reshape(np.arange(0, x1Data.shape[1]),(x3Data.shape[1],1)),
-                                        np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),np.ones((x1Data.shape[1],1))))
-
-    ##matchesList13 = matchesList12
-    dMatchesList12 = utils.indexMatrixToMatchesList(matchesList12)
-    dMatchesList13 = utils.indexMatrixToMatchesList(matchesList13)
-
-    # Matched points in numpy from list of DMatches
-    srcPts12 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList12])
-    dstPts12 = np.float32([kpCv2[m.trainIdx].pt for m in dMatchesList12])
-
-    srcPts13 = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList13])
-    dstPts13 = np.float32([kpCv3[m.trainIdx].pt for m in dMatchesList12])
-
-    #matches12, srcPts12, dstPts12 = utils.do_matches(im1_pth, im2_pth, option=1)
-    #matches13, srcPts13, dstPts13 = utils.do_matches(im1_pth, im3_pth, option=1)
-
-    #num_iterations = 1000
-    #threshold = 0.5
-    #F12, _ = utils.ransac_fundamental_matrix(matches12, num_iterations, threshold)
-    #F13, _ = utils.ransac_fundamental_matrix(matches13, num_iterations, threshold)
-
-
-    # Matched points in homogeneous coordinates
-    srcPts12 = np.vstack((srcPts12.T, np.ones((1, srcPts12.shape[0]))))
-    dstPts12 = np.vstack((dstPts12.T, np.ones((1, dstPts12.shape[0]))))
-
-    srcPts13 = np.vstack((srcPts13.T, np.ones((1, srcPts13.shape[0]))))
-    dstPts13 = np.vstack((dstPts13.T, np.ones((1, dstPts13.shape[0]))))
-                         
-
-    F12 = utils.estimate_fundamental_8point(srcPts12, dstPts12)
-    F13 = utils.estimate_fundamental_8point(srcPts13, dstPts13)
-
-    E_12 = K_c.T @ F12 @ K_c
-    E_13 = K_c.T @ F13 @ K_c
-
-    # Descomponer la matriz esencial E en 4 posibles soluciones
-    R12_1, R12_2, t12, _ = utils.decompose_essential_matrix(E_12)
-    R13_1, R13_2, t13, _ = utils.decompose_essential_matrix(E_13)
-
-    # Seleccionar la solución correcta triangulando los puntos 3D
-    R12, t12 = utils.select_correct_pose(R12_1, R12_2, t12, K_c, K_c, srcPts12, dstPts12)
-    R13, t13 = utils.select_correct_pose(R13_1, R13_2, t13, K_c, K_c, srcPts13, dstPts13)
-
+    srcPts12, dstPts12, R12, t12 =  utils.create_match_lists(kpCv1, kpCv2, x1Data, x2Data, K_c)
+    srcPts13, dstPts13, R13, t13 = utils.create_match_lists(kpCv1, kpCv3, x1Data, x3Data, K_c)
 
     T_wc1 = np.eye(4)
     T_wc2 = utils.ensamble_T(R12, t12)

@@ -24,7 +24,7 @@ import csv
 import scipy as sc
 import scipy.optimize as scOptim
 import scipy.io as sio
-from scipy.optimize import least_squares
+
 
 def indexMatrixToMatchesList(matchesList):
     """

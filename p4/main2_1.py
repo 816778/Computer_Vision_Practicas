@@ -83,61 +83,70 @@ if __name__ == "__main__":
     x1_no_opt = utils.project_points(K_c, T_wc1, X_w)
     x2_no_opt = utils.project_points(K_c, T_wc2, X_w)
     x3_no_opt = utils.project_points(K_c, T_wc3, X_w)
-
-    x1 = x1Data
-    x2 = x2Data
-    x3 = x3Data
-
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
-
-    x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
-    x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
-    x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
-
-    if X_w_opt.shape[1] < 4:
-        raise ValueError("Se requieren al menos 4 puntos para solvePnP con SOLVEPNP_EPNP")
-
-    objectPoints = X_w_opt.T.astype(np.float64)
-    imagePoints = np.ascontiguousarray(x3[:2, :].T).reshape((x3.shape[1], 1, 2)) 
-    print("objectPoints", objectPoints.shape)
-    print("imagePoints", imagePoints.shape)
-
-    distCoeffs = np.zeros((4, 1), dtype=np.float64)
-    retval, rvec, tvec = cv2.solvePnP(
-        objectPoints, 
-        imagePoints, 
-        K_c, 
-        distCoeffs, 
-        flags=cv2.SOLVEPNP_EPNP
-    )
     
-    R = utils.rotvec_to_rotmat(rvec)
-    print("Matriz de rotación R:", R)
-    print("Vector de traslación t:", tvec)
+    ejecucion_R = False
 
-    T_c1_c3 = np.eye(4)
-    T_c1_c3[:3, :3] = R  #
-    T_c1_c3[:3, 3] = tvec.flatten()
+    #######################
+    if ejecucion_R:
+        theta_init, t_init = utils.extract_theta_and_t_from_T(T_wc2)
+        print(f"Theta inicial: {theta_init}.\nt_init: {t_init}")
+        print(f"T_wc2: {T_wc2}")
 
-    T_wc3 = T_wc1_opt @ T_c1_c3
+        print(f"X_w shape: {X_w.shape}")
+        print(f"X data shape: {x1Data.shape}")
 
-    fig3D = plt.figure(1)
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+        X_w_init = X_w.flatten()
+        initial_params = np.hstack((theta_init, t_init, X_w_init))
 
-    plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    plot_utils.drawRefSystem(ax, T_wc1, '-', 'C1')
-    plot_utils.drawRefSystem(ax, T_wc2, '-', 'C2')
-    plot_utils.drawRefSystem(ax, T_wc3, '-', 'C3')
+        args = (x1Data, x2Data, K_c, x2Data.shape[1])
 
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
+        result = scOptim.least_squares(
+            utils.resBundleProjection_2,
+            initial_params,
+            args=args,
+            method='lm'  # Método Levenberg-Marquardt
+        )
 
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
+        T_wc2_opt = utils.construct_T_from_theta_and_t(result.x[:3], result.x[3:6].reshape(3, 1))
+        print(f"T_wc2_opt: {T_wc2_opt}")
+
+        X_w_opt = result.x[6:].reshape(3, -1)
+
+        x1_proj_opt = utils.project_points(K_c, T_wc1, X_w_opt)
+        x2_proj_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
+        x3_proj_opt = utils.project_points(K_c, T_wc3, X_w_opt)
+
+        plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_proj_opt, 'Image 1')
+        plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_proj_opt, 'Image 2')
+
+    else:
+        x1 = x1Data
+        x2 = x2Data
+        x3 = x3Data
+        T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
+
+        x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
+        x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
+        x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
+
+        plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_p_opt, 'Image 1')
+        plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_p_opt, 'Image 2')
+        plot_utils.visualize_projection_2(image3, x3Data, x3_no_opt, x3_p_opt, 'Image 3')
+    """
+    T_wc2_wrong: 
+    [[ 0.9902  0.1366 -0.0285 -0.0228]
+    [-0.1393  0.9564 -0.2567  0.0079]
+    [-0.0078  0.2582  0.9661  0.0258]
+    [ 0.      0.      0.      1.    ]]
+
+    T_wc2_opt: 
+    [[ 0.2843 -1.1693  0.1616 -0.7112]
+    [ 0.1871  1.108  -0.0215  0.1254]
+    [-0.4835 -1.0109  0.4435  0.672 ]]
+
+    Theta final: [-1.8359  0.3148  0.2362].
+    t_final: [-0.7112  0.1254  0.672 ]
+    """
+    #########################################################################################
+
+   
