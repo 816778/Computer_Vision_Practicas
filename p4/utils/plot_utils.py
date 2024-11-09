@@ -182,3 +182,47 @@ def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title):
     print('Close the figures to continue.')
     plt.show()
 
+
+
+def show_points_on_image(x_coords, y_coords, labels=None, block=True):
+    """
+    Muestra los puntos en la imagen y los etiqueta.
+    
+    Args:
+        image_path (str): Ruta de la imagen donde se mostrarán los puntos.
+        points (list or array): Lista o array de puntos a mostrar (cada punto debe ser un array [x, y]).
+        labels (list, optional): Lista de etiquetas para los puntos. Si no se proporciona, no se etiquetan.
+    """     
+    # Dibujar los puntos en la imagen
+    plt.scatter(x_coords, y_coords, color='b', s=100, marker='x', label='Puntos')
+    
+    # Etiquetar los puntos si se proporcionan etiquetas
+    if labels is not None:
+        for i, label in enumerate(labels):
+            plt.text(x_coords[i] + 10, y_coords[i] - 10, label, color='red', fontsize=12)
+    
+    # Mostrar el resultado
+    plt.title('Puntos proyectados en la imagen')
+    plt.axis('off')  # Ocultar los ejes
+    # Plot and continue
+    plt.show(block=block)    
+
+
+def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
+    """
+    Dibuja las líneas epipolares en la segunda imagen a partir de los puntos en la primera imagen.
+    """
+    plt.figure()
+    plt.imshow(img2, cmap='gray')
+
+    for i in range(len(x1[0])):
+        p1 = np.append(x1[:, i], 1)  # Punto en coordenadas homogéneas
+        l2 = F @ p1  # Línea epipolar en la segunda imagen
+
+        # Dibujar la línea epipolar
+        x_vals = np.array([0, img2.shape[1]])  # Límites de la imagen
+        y_vals = -(l2[0] * x_vals + l2[2]) / l2[1]
+        plt.plot(x_vals, y_vals, color='blue')
+
+    plt.title(title)
+    plt.show()

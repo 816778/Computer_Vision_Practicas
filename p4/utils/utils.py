@@ -48,6 +48,16 @@ def matchesListToIndexMatrix(dMatchesList):
         matchesList.append([np.int32(dMatchesList[k].queryIdx), np.int32(dMatchesList[k].trainIdx), dMatchesList[k].distance])
     return matchesList
 
+def projectionMatrix(K, T_w_c):
+    R_w_c = T_w_c[0:3, 0:3]  # La rotación: parte superior izquierda (3x3)
+    t_w_c = T_w_c[0:3, 3]    # La traslación: última columna (3x1)
+    
+    Rt = ensamble_T(R_w_c, t_w_c)
+    # Rt = np.linalg.inv(T_w_c)
+    
+    # K*[R|t] para obtener la matriz de proyección
+    P = K @ Rt[0:3, :]
+    return P
 
 def triangulate_points(P1, P2, x1, x2):
     """
@@ -169,23 +179,6 @@ def project_points(K, T, X_w):
     return x_proj
 
 
-def project_points_exp_rot(K, T_w_c, rot, X_w):
-    if T_w_c.shape == (3, 4):
-        T_w_c = np.vstack([T_w_c, [0, 0, 0, 1]])
-
-    if X_w.shape[0] == 3:
-        X_w = np.vstack([X_w, np.ones((1, X_w.shape[1]))])
-
-    # Rt = np.linalg.inv(T_w_c)
-    
-    R_w_c = expm(crossMatrix(rot))
-
-    T = ensamble_T(R_w_c, T_w_c)    
-    x_proj = project_points(K, T, X_w)
-    
-    return x_proj
-
-
 def crossMatrixInv(M):
     x = [M[2, 1], M[0, 2], M[1, 0]]
     return x
@@ -273,46 +266,70 @@ def decompose_essential_matrix(E):
     return R1, R2, t, -t
 
 
-
-def residual_bundle_adjustmentNormalRot(params, K, x1Data, x2Data, x3Data):
+def residual_bundle_adjustmentNormalRot_original(params, K, x1Data, x2Data):
 
     T_wc1 = params[:12].reshape(3, 4)
     T_wc2 = params[12:24].reshape(3, 4)
-    T_wc3 = params[24:36].reshape(3, 4)
-    X_w = params[36:].reshape(-1, 3).T
+    X_w = params[24:].reshape(-1, 3).T
     
     x1_proj = project_points(K, T_wc1, X_w)
     x2_proj = project_points(K, T_wc2, X_w)
-    x3_proj = project_points(K, T_wc3, X_w)
     
     residuals = np.hstack((
         ((x1_proj[:2, :] - x1Data)*(x1_proj[:2, :] - x1Data)).flatten(),
-        ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten(),
-        ((x3_proj[:2, :] - x3Data)*(x3_proj[:2, :] - x3Data)).flatten()
+        ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten()
     ))
 
     print("Residuals: ", residuals.mean())
 
     return residuals
 
-def residual_bundle_adjustment(params, K, x1Data, x2Data, x3Data):
+def residual_bundle_adjustmentNormalRot(params, K, imgPoints, nImages):
+
+    #T_wc1 = params[:12].reshape(3, 4)
+    #T_wc2 = params[12:24].reshape(3, 4)
+    #X_w = params[24:].reshape(-1, 3).T
+
+    T = []
+    for i in range(nImages):
+        t = params[i*12:(i+1)*12].reshape(3, 4)
+        T.append(t)
+    
+    X_w = params[nImages*12:].reshape(-1, 3).T
+    
+    x_proj = [] 
+    for i in range(nImages):
+        x_proj.append(project_points(K, T[i], X_w))
+    
+    residuals = np.array([])
+
+    for i in range(nImages):
+        residuals = np.hstack((residuals,
+            ((x_proj[i][:2, :] - imgPoints[i])*(x_proj[i][:2, :] - imgPoints[i])).flatten()
+        ))
+
+    print("Residuals: ", residuals.mean())
+
+    return residuals
+
+def residual_bundle_adjustment(params, K, x1Data, x2Data):
     t1 = params[:3]
-    r1 = params[3:6]
+    th1 = params[3:6]
     t2 = params[6:9]
-    r2 = params[9:12]
-    t3 = params[12:15]
-    r3 = params[15:18]
+    th2 = params[9:12]
+    X_w = params[12:].reshape(-1, 3).T
 
-    X_w = params[18:].reshape(-1, 3).T
-    
-    x1_proj = project_points_exp_rot(K, t1, r1, X_w)
-    x2_proj = project_points_exp_rot(K, t2, r2, X_w)
-    x3_proj = project_points_exp_rot(K, t3, r3, X_w)
+    R1 = expm(crossMatrix(th1))
+    R2 = expm(crossMatrix(th2))
+    T1 = ensamble_T(R1, t1)  
+    T2 = ensamble_T(R2, t2)
+
+    x1_proj = project_points(K, T1, X_w)
+    x2_proj = project_points(K, T2, X_w)
     
     residuals = np.hstack((
         ((x1_proj[:2, :] - x1Data)*(x1_proj[:2, :] - x1Data)).flatten(),
-        ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten(),
-        ((x3_proj[:2, :] - x3Data)*(x3_proj[:2, :] - x3Data)).flatten()
+        ((x2_proj[:2, :] - x2Data)*(x2_proj[:2, :] - x2Data)).flatten()
     ))
 
     print("Residuals: ", residuals.mean())
@@ -320,53 +337,58 @@ def residual_bundle_adjustment(params, K, x1Data, x2Data, x3Data):
     return residuals
 
 
-def run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K, X_w, x1Data, x2Data, x3Data):
+def run_bundle_adjustmentFull(T, K, X_w, imgPoints):
     
+    nImages = len(T)
+
     if X_w.shape[0] == 4:
         X_w = (X_w[:3, :] / X_w[3, :])
     
-    T_wc1_flat = T_wc1[:3, :].flatten()
-    T_wc2_flat = T_wc2[:3, :].flatten()
-    T_wc3_flat = T_wc3[:3, :].flatten()
+    T_flat = np.array([])
+    for i in range(nImages):
+        T_flat = np.hstack((T_flat, T[i][:3, :].flatten()))
+
     X_w_flat = X_w.T.flatten()
 
-    initial_params = np.hstack((T_wc1_flat, T_wc2_flat, T_wc3_flat, X_w_flat))
-    
+    initial_params = np.hstack((T_flat, X_w_flat))
+
     result = scOptim.least_squares(residual_bundle_adjustmentNormalRot, initial_params,
-                                   args=(K, x1Data, x2Data, x3Data), method='lm')
+                                   args=(K, imgPoints, nImages), method='lm')
     
     optimized_params = result.x
-    T_wc1_opt = optimized_params[:12].reshape(3, 4)
-    T_wc2_opt = optimized_params[12:24].reshape(3, 4)
-    T_wc3_opt = optimized_params[24:36].reshape(3, 4)
-    X_w_opt = optimized_params[36:].reshape(-1, 3).T
+
+    T_opt = []
+    for i in range(nImages):
+        t_opt = optimized_params[i*12:(i+1)*12].reshape(3, 4)
+        T_opt.append(t_opt)
+
+    X_w_opt = optimized_params[nImages*12:].reshape(-1, 3).T
     
-    return T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt
+    return T_opt, X_w_opt
 
 
 
-def run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K, X_w, x1Data, x2Data, x3Data):
+def run_bundle_adjustment(T_wc1, T_wc2, K, X_w, x1Data, x2Data):
     if X_w.shape[0] == 4:
         X_w = (X_w[:3, :] / X_w[3, :])
     
     t1 = T_wc1[:3, 3]
     R1 = T_wc1[:3, :3]
-    th1 = crossMatrixInv(sc.linalg.logm(R1))
+    th1 = crossMatrixInv(logm(R1))
 
     t2 = T_wc2[:3, 3]
     R2 = T_wc2[:3, :3]
-    th2 = crossMatrixInv(sc.linalg.logm(R2))
-
-    t3 = T_wc3[:3, 3]
-    R3 = T_wc3[:3, :3]
-    th3 = crossMatrixInv(sc.linalg.logm(R3))
+    th2 = crossMatrixInv(logm(R2))
 
     X_w_flat = X_w.T.flatten()
 
-    initial_params = np.hstack((t1, th1, t2, th2, t3, th3, X_w_flat))
+    initial_params = np.hstack((t1, th1, t2, th2, X_w_flat))
+
     
+    residual_bundle_adjustment(initial_params, K, x1Data, x2Data)
+
     result = scOptim.least_squares(residual_bundle_adjustment, initial_params,
-                                   args=(K, x1Data, x2Data, x3Data), method='lm')
+                                   args=(K, x1Data, x2Data), method='lm')
     
     optimized_params = result.x
 
@@ -374,27 +396,15 @@ def run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K, X_w, x1Data, x2Data, x3Data):
     th1_opt = optimized_params[3:6]
     t2_opt = optimized_params[6:9]
     th2_opt = optimized_params[9:12]
-    t3_opt = optimized_params[12:15]
-    th3_opt = optimized_params[15:18]
-    X_w_opt = optimized_params[18:].reshape(-1, 3).T
+    X_w_opt = optimized_params[12:].reshape(-1, 3).T
 
     R1_opt = expm(crossMatrix(th1_opt))
     R2_opt = expm(crossMatrix(th2_opt))
-    R3_opt = expm(crossMatrix(th3_opt))
 
-    T_wc1_opt = np.eye(4)
-    T_wc1_opt[:3, :3] = R1_opt
-    T_wc1_opt[:3, 3] = t1_opt
+    T_wc1_opt = ensamble_T(R1_opt, t1_opt)
+    T_wc2_opt = ensamble_T(R2_opt, t2_opt)
 
-    T_wc2_opt = np.eye(4)
-    T_wc2_opt[:3, :3] = R2_opt
-    T_wc2_opt[:3, 3] = t2_opt
-
-    T_wc3_opt = np.eye(4)
-    T_wc3_opt[:3, :3] = R3_opt
-    T_wc3_opt[:3, 3] = t3_opt
-    
-    return T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt
+    return T_wc1_opt, T_wc2_opt, X_w_opt
 
 
 
@@ -587,7 +597,7 @@ def do_matches(path_image_1='images/image1.png', path_image_2='images/image2.png
 ####################################################################################
 
 
-def create_match_lists(kpCv1, kpCv_other, x1Data, x_otherData, K_c):
+def linearPoseEstimation(x1Data, x2Data, kpCv1, kpCv2, K_c, T_wc1 = np.eye(4)):
     """
     Crea listas de coincidencias y convierte los puntos en coordenadas homogéneas.
 
@@ -601,9 +611,10 @@ def create_match_lists(kpCv1, kpCv_other, x1Data, x_otherData, K_c):
     - srcPts_hom: Puntos fuente en coordenadas homogéneas.
     - dstPts_hom: Puntos destino en coordenadas homogéneas.
     """
+    
     # Crear lista de coincidencias (matches)
     matchesList = np.hstack((
-        np.reshape(np.arange(0, x1Data.shape[1]), (x_otherData.shape[1], 1)),
+        np.reshape(np.arange(0, x1Data.shape[1]), (x2Data.shape[1], 1)),
         np.reshape(np.arange(0, x1Data.shape[1]), (x1Data.shape[1], 1)),
         np.ones((x1Data.shape[1], 1))
     ))
@@ -612,12 +623,14 @@ def create_match_lists(kpCv1, kpCv_other, x1Data, x_otherData, K_c):
 
     # Extraer puntos coincidentes en las dos vistas
     srcPts = np.float32([kpCv1[m.queryIdx].pt for m in dMatchesList])
-    dstPts = np.float32([kpCv_other[m.trainIdx].pt for m in dMatchesList])
+    dstPts = np.float32([kpCv2[m.trainIdx].pt for m in dMatchesList])
 
     # Convertir a coordenadas homogéneas
     srcPts = np.vstack((srcPts.T, np.ones((1, srcPts.shape[0]))))
     dstPts = np.vstack((dstPts.T, np.ones((1, dstPts.shape[0]))))
 
+
+    #F, _ = ransac_fundamental_matrix(matches, 1000, 3)
     F = estimate_fundamental_8point(srcPts, dstPts)
 
     E = K_c.T @ F @ K_c
@@ -1119,5 +1132,4 @@ def project_points_multi_view(theta_t_opt_list, K, X_w_opt):
         print(f"Shape de projected_points_list[{i}]: {points.shape}")
 
     return projected_points_list
-
 

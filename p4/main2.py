@@ -28,8 +28,8 @@ import scipy.io as sio
 import utils.utils as utils
 import utils.plot_utils as plot_utils
 
-work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p4/"
-work_dir = ""
+work_dir = "/home/hsunekichi/Escritorio/Computer_Vision_Practicas/p4/"
+#work_dir = ""
 
 def load_data():
     T_wc1 = np.loadtxt(work_dir+"data/T_w_c1.txt")
@@ -47,7 +47,7 @@ def load_data():
 if __name__ == "__main__":
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
-    _, _, _, K_c, _, x1Data, x2Data, x3Data = load_data()
+    _, _, T_wc3_ref, K_c, _, x1Data, x2Data, x3Data = load_data()
 
     #plot_utils.plot_3D_scene(T_wc1, T_wc2, T_wc3, X_w)
     
@@ -68,28 +68,35 @@ if __name__ == "__main__":
         kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
         kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
 
-    srcPts12, dstPts12, R12, t12 =  utils.create_match_lists(kpCv1, kpCv2, x1Data, x2Data, K_c)
-    srcPts13, dstPts13, R13, t13 = utils.create_match_lists(kpCv1, kpCv3, x1Data, x3Data, K_c)
+    
+    pts1, pts2, R12, t12 = utils.linearPoseEstimation(x1Data, x2Data, kpCv1, kpCv2, K_c)
 
-    T_wc1 = np.eye(4)
+    #x_coords = np.array(x_coords)
+    #y_coords = np.array(y_coords)
+    #x1 = np.vstack((x_coords, y_coords))
+    #plot_utils.plot_epipolar_lines(F12, srcPts12, image2)
+
+
+    T_wc1 = np.eye(4)   # se toma la primera cámara como referencia
     T_wc2 = utils.ensamble_T(R12, t12)
-    T_wc3 = utils.ensamble_T(R13, t13)
-    P1 = K_c @ T_wc1[:3, :]
-    P2 = K_c @ T_wc2[:3, :]
 
-    X_w = utils.triangulate_points(P1, P2, srcPts12, dstPts12)
+    P1 = utils.projectionMatrix(K_c, T_wc1) # K_c @ T_wc1[0:3, :]
+    P2 = utils.projectionMatrix(K_c, T_wc2) # K_c @ T_wc2[0:3, :]
+
+    X_w = utils.triangulate_points(P1, P2, pts1, pts2)
 
     x1 = x1Data
     x2 = x2Data
     x3 = x3Data
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustment(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
+    T_opt, X_w_opt = utils.run_bundle_adjustmentFull([T_wc1, T_wc2], K_c, X_w, [x1, x2])
+
+    T_wc1_opt = T_opt[0]
+    T_wc2_opt = T_opt[1]
 
     # Step 6: Visualize Optimized Projection
-    x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
-    x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
-    x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
+    x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w)
+    x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w)
 
     plot_utils.visualize_projection(image1, x1Data, x1_p_opt, "Image 1 - Optimized Projection")
     plot_utils.visualize_projection(image2, x2Data, x2_p_opt, "Image 2 - Optimized Projection")
-    plot_utils.visualize_projection(image3, x3Data, x3_p_opt, "Image 3 - Optimized Projection")
