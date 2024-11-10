@@ -85,7 +85,7 @@ if __name__ == "__main__":
     x2 = x2Data
     x3 = x3Data
 
-    T_opt, X_w_opt = utils.run_bundle_adjustmentFull([T_wc1, T_wc2], K_c, X_w, [x1, x2])
+    T_opt, X_w_opt = utils.run_bundle_adjustmentFullT([T_wc1, T_wc2], K_c, X_w, [x1, x2])
     T_wc1_opt, T_wc2_opt = T_opt
 
     if X_w_opt.shape[1] < 4:
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         flags=cv2.SOLVEPNP_EPNP
     )
     
-    R = utils.rotvec_to_rotmat(rvec)
+    #R = utils.rotvec_to_rotmat(rvec)
     R, _ = cv2.Rodrigues(rvec)
     print("Matriz de rotación R:", R)
     print("Vector de traslación t:", tvec)
