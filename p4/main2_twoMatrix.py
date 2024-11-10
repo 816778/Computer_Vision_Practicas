@@ -29,7 +29,7 @@ import utils.utils as utils
 import utils.plot_utils as plot_utils
 
 work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p4/"
-#work_dir = ""
+work_dir = ""
 
 def load_data():
     T_wc1 = np.loadtxt(work_dir+"data/T_w_c1.txt")

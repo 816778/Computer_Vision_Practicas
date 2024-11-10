@@ -40,38 +40,18 @@ En esta implementación, cada matriz de transformación de cada cámara (excepto
 Desventajas:
 - La rotación 3x3 tiene 9 valores, pero solo 3 grados de libertad. Optimizar los 9 elementos de R es redundante
 
-```python
-def run_bundle_adjustment_multi_view_2(T_wc_list, K, X_w, xData_list):
-```
-En esta implementación, se utiliza una parametrización alternativa para las rotaciones basada en el vector de rotación θ, que es un vector en el espacio so(3) de tres dimensiones.
 
-Rotación se representa como vector `θ = (θ1, θ2, θ3)`
+<div style="display: flex; justify-content: space-around;">
+    <figure>
+        <img src="results/2_1comparation_1.png" alt="Image 1" width="400"/>
+        <figcaption>Image 1</figcaption>
+    </figure>
+    <figure>
+        <img src="results/2_1comparation_2.png" alt="Image 2" width="400"/>
+        <figcaption>Image 2</figcaption>
+    </figure>
+</div>
 
-`R=exp([θ]x)`
-
-`[θ]x`: Matriz antisimétrica de `θ`
-
-Para convertir de R a θ: `[θ]x=log(R)`
-
-```python
-theta = crossMatrixInv(logm(R_wc)) # Convierte R_wc de cada cámara (T_wc) a theta
-
-theta_t_flat = np.hstack([np.hstack([theta, t]) for theta, t in theta_t_flat_list])
-
-result = scOptim.least_squares(residual_bundle_adjustment_multi_view_2, initial_params, args=(K, T_wc_list[0], xData_list), method='lm')
-```
-
-```python
-def residual_bundle_adjustment_multi_view_2(params, K, T_wc1, xData_list):
-    # Convierte vector θ optimizado en matriz de rotación R
-    R_opt = expm(crossMatrix(theta_opt))
-    # combinamos R y t ara formar la matriz de transformación T_wc
-```
-
-```bash
-Tiempo empleado en run_bundle_adjustment_multi_view_2: 9.10 segundos
-Tiempo empleado en run_bundle_adjustment_multi_view: 11.71 segundos
-```
 
 ## 3. Perspective-N-Point pose estimation of camera three
 
@@ -102,18 +82,18 @@ Una vez obtenidos rvec (vector de rotación) y tvec
 
 <div style="display: flex; justify-content: space-around;">
     <figure>
-        <img src="results/2_1comparation_1.png" alt="Image 1" width="400"/>
+        <img src="results/4_1comparation_1.png" alt="Image 1" width="400"/>
         <figcaption>Image 1</figcaption>
     </figure>
     <figure>
-        <img src="results/2_1comparation_2.png" alt="Image 2" width="400"/>
+        <img src="results/4_1comparation_2.png" alt="Image 2" width="400"/>
         <figcaption>Image 2</figcaption>
     </figure>
 </div>
 
 <div style="display: flex; justify-content: space-around;">
     <figure>
-        <img src="results/2_1comparation_3.png" alt="Image 3" width="400"/>
+        <img src="results/4_1comparation_3.png" alt="Image 3" width="400"/>
         <figcaption>Image 3</figcaption>
     </figure>
 </div>

@@ -29,7 +29,7 @@ import utils.utils as utils
 import utils.plot_utils as plot_utils
 
 work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p4/"
-#work_dir = ""
+work_dir = ""
 
 def load_data():
     T_wc1 = np.loadtxt(work_dir+"data/T_w_c1.txt")
@@ -77,12 +77,6 @@ if __name__ == "__main__":
     R12, t12 = utils.linearPoseEstimation(x1Data, x2Data, K_c)
     R13, t13 = utils.linearPoseEstimation(x1Data, x3Data, K_c)
 
-    #x_coords = np.array(x_coords)
-    #y_coords = np.array(y_coords)
-    #x1 = np.vstack((x_coords, y_coords))
-    #plot_utils.plot_epipolar_lines(F12, srcPts12, image2)
-
-
     T_wc1 = np.eye(4)   # se toma la primera cámara como referencia
     T_wc2 = utils.ensamble_T(R12, t12)
     T_wc3 = utils.ensamble_T(R13, t13)
@@ -103,9 +97,7 @@ if __name__ == "__main__":
 
     T_opt, X_w_opt = utils.run_bundle_adjustment([T_wc1, T_wc2, T_wc3], K_c, X_w, [x1, x2, x3])
 
-    T_wc1_opt = T_opt[0]
-    T_wc2_opt = T_opt[1]
-    T_wc3_opt = T_opt[2]
+    T_wc1_opt, T_wc2_opt, T_wc3_opt = T_opt
 
     # Step 6: Visualize Optimized Projection
     x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
