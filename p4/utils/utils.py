@@ -308,7 +308,7 @@ def residual_bundle_adjustmentNormalRot(params, K, imgPoints, nImages):
             ((x_proj[i][:2, :] - imgPoints[i])*(x_proj[i][:2, :] - imgPoints[i])).flatten()
         ))
 
-    print("Residuals: ", residuals.mean())
+    # print("Residuals: ", residuals.mean())
 
     return residuals
 

@@ -69,36 +69,30 @@ if __name__ == "__main__":
         kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
         kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
 
-    srcPts12, dstPts12, R12, t12 =  utils.create_match_lists(kpCv1, kpCv2, x1Data, x2Data, K_c)
-    srcPts13, dstPts13, R13, t13 = utils.create_match_lists(kpCv1, kpCv3, x1Data, x3Data, K_c)
+    pts1, pts2, R12, t12 = utils.linearPoseEstimation(x1Data, x2Data, kpCv1, kpCv2, K_c)
+    # pts1_3, pts3, R13, t13 = utils.linearPoseEstimation(x1Data, x3Data, kpCv1, kpCv3, K_c)
 
     T_wc1 = np.eye(4)   # se toma la primera cámara como referencia
     T_wc2 = utils.ensamble_T(R12, t12)
-    T_wc3 = utils.ensamble_T(R13, t13)
-    P1 = K_c @ T_wc1[:3, :]
-    P2 = K_c @ T_wc2[:3, :]
+    # T_wc3 = utils.ensamble_T(R13, t13)
 
-    X_w = utils.triangulate_points(P1, P2, srcPts12, dstPts12)
+    P1 = utils.projectionMatrix(K_c, T_wc1)
+    P2 = utils.projectionMatrix(K_c, T_wc2)
 
-    x1_no_opt = utils.project_points(K_c, T_wc1, X_w)
-    x2_no_opt = utils.project_points(K_c, T_wc2, X_w)
-    x3_no_opt = utils.project_points(K_c, T_wc3, X_w)
+    X_w = utils.triangulate_points(P1, P2, pts1, pts2)
 
     x1 = x1Data
     x2 = x2Data
     x3 = x3Data
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, X_w_opt = utils.run_bundle_adjustmentFull(T_wc1, T_wc2, T_wc3, K_c, X_w, x1, x2, x3)
-
-    x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
-    x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
-    x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
+    T_opt, X_w_opt = utils.run_bundle_adjustmentFull([T_wc1, T_wc2], K_c, X_w, [x1, x2])
+    T_wc1_opt, T_wc2_opt = T_opt
 
     if X_w_opt.shape[1] < 4:
         raise ValueError("Se requieren al menos 4 puntos para solvePnP con SOLVEPNP_EPNP")
 
     objectPoints = X_w_opt.T.astype(np.float64)
-    imagePoints = np.ascontiguousarray(x3[:2, :].T).reshape((x3.shape[1], 1, 2)) 
+    imagePoints = np.ascontiguousarray(x3[0:2,:].T).reshape((x3.shape[1], 1, 2))
     print("objectPoints", objectPoints.shape)
     print("imagePoints", imagePoints.shape)
 
@@ -112,14 +106,16 @@ if __name__ == "__main__":
     )
     
     R = utils.rotvec_to_rotmat(rvec)
+    R, _ = cv2.Rodrigues(rvec)
     print("Matriz de rotación R:", R)
     print("Vector de traslación t:", tvec)
 
-    T_c1_c3 = np.eye(4)
-    T_c1_c3[:3, :3] = R  #
-    T_c1_c3[:3, 3] = tvec.flatten()
+    T_wc3 = np.eye(4)
+    T_wc3[:3, :3] = R 
+    T_wc3[:3, 3] = tvec.flatten()
 
-    T_wc3 = T_wc1_opt @ T_c1_c3
+    T_cw3 = T_wc3.copy()
+    T_wc3 = np.linalg.inv(T_cw3)
 
     fig3D = plt.figure(1)
     ax = plt.axes(projection='3d', adjustable='box')
@@ -128,11 +124,11 @@ if __name__ == "__main__":
     ax.set_zlabel('Z')
 
     plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    plot_utils.drawRefSystem(ax, T_wc1, '-', 'C1')
-    plot_utils.drawRefSystem(ax, T_wc2, '-', 'C2')
+    plot_utils.drawRefSystem(ax, T_wc1_opt, '-', 'C1')
+    plot_utils.drawRefSystem(ax, T_wc2_opt, '-', 'C2')
     plot_utils.drawRefSystem(ax, T_wc3, '-', 'C3')
 
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
+    ax.scatter(X_w_opt[0, :], X_w_opt[1, :], X_w_opt[2, :], marker='.')
 
     #Matplotlib does not correctly manage the axis('equal')
     xFakeBoundingBox = np.linspace(0, 4, 2)

@@ -33,7 +33,7 @@ El objetivo es minimizar el error de proyección entre:
 Difieren en la manera en que representan y optimizan las rotaciones de las cámaras, lo cual tiene implicaciones importantes en términos de estabilidad numérica y eficiencia. 
 
 ```python
-def run_bundle_adjustment_multi_view(T_wc_list, K, X_w, xData_list):
+def run_bundle_adjustmentFull(T, K, X_w, imgPoints):
 ```
 En esta implementación, cada matriz de transformación de cada cámara (excepto la primera, que se toma como referencia y se mantiene fija) se representa y optimiza directamente como una matriz T_xc (3x4). Es decir, cada matriz T_wc se representa por 12 paŕametros aplanados (9) de rotación y 3 de traslación
 
@@ -91,6 +91,10 @@ Una vez obtenidos rvec (vector de rotación) y tvec
     <figure>
         <img src="results/3_camaras.png" alt="Camara 3 respecto a 1" width="400"/>
         <figcaption>Camara 3 respecto a 1</figcaption>
+    </figure>
+    <figure>
+        <img src="results/3_camaras_all_optimices.png" alt="Camara 3 respecto a 1 correcta" width="400"/>
+        <figcaption>Camara 3 respecto a 1 correcta</figcaption>
     </figure>
 </div>
 
