@@ -110,7 +110,7 @@ if __name__ == "__main__":
             print("TWO-VIEW")
         else:
             start_time = time.time()
-            T_wc_opt_list, X_w_opt = utils.run_bundle_adjustmentFullT([T_wc1, T_wc2, T_wc3], K_c, X_w, [x1Data, x2Data, x3Data])
+            T_wc_opt_list, X_w_opt = utils.run_bundle_adjustment([T_wc1, T_wc2, T_wc3], K_c, X_w, [x1Data, x2Data, x3Data])
             end_time = time.time()  
             T_wc1_opt, T_wc2_opt, T_wc3_opt = T_wc_opt_list
             elapsed_time_2 = end_time - start_time
