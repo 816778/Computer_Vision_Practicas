@@ -41,6 +41,12 @@ def load_data():
     x1Data = np.loadtxt(work_dir+"data/x1Data.txt")
     x2Data = np.loadtxt(work_dir+"data/x2Data.txt")
     x3Data = np.loadtxt(work_dir+"data/x3Data.txt")
+
+    # Convertir a coordenadas homogéneas
+    x1Data = np.vstack((x1Data, np.ones((1, x1Data.shape[1]))))
+    x2Data = np.vstack((x2Data, np.ones((1, x2Data.shape[1]))))
+    x3Data = np.vstack((x3Data, np.ones((1, x3Data.shape[1]))))
+
     return T_wc1, T_wc2, T_wc3, K_c, X_w, x1Data, x2Data, x3Data
 
 
@@ -60,16 +66,7 @@ if __name__ == "__main__":
     image2 = cv2.imread(im2_pth)
     image3 = cv2.imread(im3_pth)
 
-    # Construct the matches
-    kpCv1 = []
-    kpCv2 = []
-    kpCv3 = []
-    for kPoint in range(x1Data.shape[1]):
-        kpCv1.append(cv2.KeyPoint(x1Data[0, kPoint], x1Data[1, kPoint],1))
-        kpCv2.append(cv2.KeyPoint(x2Data[0, kPoint], x2Data[1, kPoint],1))
-        kpCv3.append(cv2.KeyPoint(x3Data[0, kPoint], x3Data[1, kPoint],1))
-
-    pts1, pts2, R12, t12 = utils.linearPoseEstimation(x1Data, x2Data, kpCv1, kpCv2, K_c)
+    R12, t12 = utils.linearPoseEstimation(x1Data, x2Data, K_c)
     # pts1_3, pts3, R13, t13 = utils.linearPoseEstimation(x1Data, x3Data, kpCv1, kpCv3, K_c)
 
     T_wc1 = np.eye(4)   # se toma la primera cámara como referencia
@@ -79,13 +76,13 @@ if __name__ == "__main__":
     P1 = utils.projectionMatrix(K_c, T_wc1)
     P2 = utils.projectionMatrix(K_c, T_wc2)
 
-    X_w = utils.triangulate_points(P1, P2, pts1, pts2)
+    X_w = utils.triangulate_points(P1, P2, x1Data, x2Data)
 
     x1 = x1Data
     x2 = x2Data
     x3 = x3Data
 
-    T_opt, X_w_opt = utils.run_bundle_adjustmentFullT([T_wc1, T_wc2], K_c, X_w, [x1, x2])
+    T_opt, X_w_opt = utils.run_bundle_adjustment([T_wc1, T_wc2], K_c, X_w, [x1, x2])
     T_wc1_opt, T_wc2_opt = T_opt
 
     if X_w_opt.shape[1] < 4:
