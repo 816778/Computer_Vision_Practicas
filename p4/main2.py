@@ -107,3 +107,24 @@ if __name__ == "__main__":
     plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_p_opt, 'Image 1')
     plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_p_opt, 'Image 2')
     plot_utils.visualize_projection_2(image3, x3Data, x3_no_opt, x3_p_opt, 'Image 3')
+
+    fig3D = plt.figure(1)
+    ax = plt.axes(projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+    plot_utils.drawRefSystem(ax, T_wc1_opt, '-', 'C1')
+    plot_utils.drawRefSystem(ax, T_wc2_opt, '-', 'C2')
+    plot_utils.drawRefSystem(ax, T_wc3_opt, '-', 'C3')
+
+    ax.scatter(X_w_opt[0, :], X_w_opt[1, :], X_w_opt[2, :], marker='.')
+
+    #Matplotlib does not correctly manage the axis('equal')
+    xFakeBoundingBox = np.linspace(0, 4, 2)
+    yFakeBoundingBox = np.linspace(0, 4, 2)
+    zFakeBoundingBox = np.linspace(0, 4, 2)
+    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
