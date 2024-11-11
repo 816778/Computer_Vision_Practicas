@@ -32,12 +32,15 @@ def load_data():
     T_wAwB_gt = np.loadtxt(work_dir+"T_wAwB_gt.txt")
     T_wAwB_seed = np.loadtxt(work_dir+"T_wAwB_seed.txt")
 
+    T_wc1 = np.loadtxt(work_dir+"T_wc1.txt")
+    T_wc2 = np.loadtxt(work_dir+"T_wc2.txt")
+
     x1 = np.loadtxt(work_dir+"x1.txt")
     x2 = np.loadtxt(work_dir+"x2.txt")
     x3 = np.loadtxt(work_dir+"x3.txt")
     x4 = np.loadtxt(work_dir+"x4.txt")
 
-    return D1_k_array, D2_k_array, K_1, K_2, T_leftRight, T_wAwB_gt, T_wAwB_seed, x1, x2, x3, x4
+    return D1_k_array, D2_k_array, K_1, K_2, T_leftRight, T_wAwB_gt, T_wAwB_seed, x1, x2, x3, x4, T_wc1, T_wc2
 
 
 def load_images():
@@ -78,7 +81,7 @@ def testing_2_1(K_1, D1_k_array):
         return 
     
     print()
-    unprojected_directions = utils.kannala_brandt_unprojection(projected_points, K_1, D1_k_array)
+    unprojected_directions = utils.kannala_brandt_unprojection_roots(projected_points, K_1, D1_k_array)
     original_directions = X_1[:3, :] / np.linalg.norm(X_1[:3, :], axis=0)
     unprojected_directions = unprojected_directions / np.linalg.norm(unprojected_directions, axis=0)
     if np.allclose(original_directions, unprojected_directions, atol=tolerance):
@@ -96,23 +99,20 @@ def testing_2_1(K_1, D1_k_array):
 if __name__ == "__main__":
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
-    D1_k_array, D2_k_array, K_1, K_2, T_leftRight, T_wAwB_gt, T_wAwB_seed, x1, x2, x3, x4 = load_data()
+    D1_k_array, D2_k_array, K_1, K_2, T_leftRight, T_wAwB_gt, T_wAwB_seed, x1, x2, x3, x4, T_wc1, T_wc2 = load_data()
     testing_2_1(K_1, D1_k_array)
 
-    directions1 = utils.kannala_brandt_unprojection(x1, K_1, D1_k_array)  
-    directions2 = utils.kannala_brandt_unprojection(x2, K_1, D1_k_array) 
+    directions1 = utils.kannala_brandt_unprojection_roots(x1, K_1, D1_k_array)  
+    directions2 = utils.kannala_brandt_unprojection_roots(x2, K_2, D2_k_array)
 
-    T_wc1 = np.eye(4)  # La cámara izquierda es el sistema de referencia
-    T_wc2 = T_leftRight
+    points_3d_pose_A = utils.triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight)
+
+    cameras = {
+        'C1': T_wc1,  
+        'C2': T_wc2  
+    }
+    print(cameras)
+
+    plot_utils.plot3DPoints(points_3d_pose_A, cameras, world_ref=False)
 
     fisheye1_frameA, fisheye1_frameB, fisheye2_frameA, fisheye2_frameB = load_images()
-
-    points_3d = utils.triangulate_points(directions1, directions2, T_wc1, T_wc2)
-
-    exit()
-    points_2d_left = utils.project_points(points_3d, K_1, T_wc1)  # Para la cámara izquierda
-    points_2d_right = utils.project_points(points_3d, K_2, T_wc2)  # Para la cámara derecha
-
-
-    plot_utils.project_points_plot(fisheye1_frameA, fisheye1_frameB, points_2d_left, points_2d_right)
-

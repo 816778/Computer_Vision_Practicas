@@ -86,37 +86,37 @@ def draw3DLine(ax, xIni, xEnd, strStyle, lColor, lWidth):
     ax.plot([np.squeeze(xIni[0]), np.squeeze(xEnd[0])], [np.squeeze(xIni[1]), np.squeeze(xEnd[1])], [np.squeeze(xIni[2]), np.squeeze(xEnd[2])],
             strStyle, color=lColor, linewidth=lWidth)
 
-def drawRefSystem(ax, T_w_c, strStyle, nameStr):
-    """
-        Draw a reference system in a 3D plot: Red for X axis, Green for Y axis, and Blue for Z axis
-    -input:
-        ax: axis handle
-        T_w_c: (4x4 matrix) Reference system C seen from W.
-        strStyle: lines style.
-        nameStr: Name of the reference system.
-    """
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 0:1], strStyle, 'r', 1)
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 1:2], strStyle, 'g', 1)
-    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
-    ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
-
-def project_points_plot(img_left, img_right, points_2d_left, points_2d_right):
+def visualize_triangulation_results(fisheye1_image, fisheye2_image, points_2d_left, points_2d_right):
+    """
+    Visualiza los puntos 3D proyectados en ambas imágenes.
+    
+    Parámetros:
+        fisheye1_image: Imagen de la cámara izquierda
+        fisheye2_image: Imagen de la cámara derecha
+        points_3d: Puntos 3D triangulados (3, N)
+        K_1: Matriz intrínseca de la cámara izquierda (3, 3)
+        K_2: Matriz intrínseca de la cámara derecha (3, 3)
+        T_wc1: Matriz de transformación de la cámara izquierda (4, 4)
+        T_wc2: Matriz de transformación de la cámara derecha (4, 4)
+    """
+    # Visualización en la imagen de la cámara izquierda
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-
-    # Imagen izquierda con puntos proyectados
-    ax1.imshow(cv2.cvtColor(img_left, cv2.COLOR_BGR2RGB))
+    
+    ax1.imshow(cv2.cvtColor(fisheye1_image, cv2.COLOR_BGR2RGB))
     ax1.scatter(points_2d_left[0, :], points_2d_left[1, :], color='red', s=10, label='Proyección 3D')
-    ax1.set_title("Proyección de Puntos 3D en la Imagen Izquierda")
+    ax1.set_title("Proyección de Puntos 3D en la Imagen de la Cámara Izquierda")
     ax1.legend()
 
-    # Imagen derecha con puntos proyectados
-    ax2.imshow(cv2.cvtColor(img_right, cv2.COLOR_BGR2RGB))
+    # Visualización en la imagen de la cámara derecha
+    ax2.imshow(cv2.cvtColor(fisheye2_image, cv2.COLOR_BGR2RGB))
     ax2.scatter(points_2d_right[0, :], points_2d_right[1, :], color='blue', s=10, label='Proyección 3D')
-    ax2.set_title("Proyección de Puntos 3D en la Imagen Derecha")
+    ax2.set_title("Proyección de Puntos 3D en la Imagen de la Cámara Derecha")
     ax2.legend()
 
     plt.show()
+
+
 
 def visualize_projection(image, xData, xProj, title):
     plt.figure()
@@ -186,4 +186,71 @@ def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
         plt.plot(x_vals, y_vals, color='blue')
 
     plt.title(title)
+    plt.show()
+
+
+def draw3DLine(ax, xIni, xEnd, strStyle, lColor, lWidth):
+    """
+    Draw a segment in a 3D plot
+    -input:
+        ax: axis handle
+        xIni: Initial 3D point.
+        xEnd: Final 3D point.
+        strStyle: Line style.
+        lColor: Line color.
+        lWidth: Line width.
+    """
+    ax.plot([np.squeeze(xIni[0]), np.squeeze(xEnd[0])], [np.squeeze(xIni[1]), np.squeeze(xEnd[1])], [np.squeeze(xIni[2]), np.squeeze(xEnd[2])],
+            strStyle, color=lColor, linewidth=lWidth)
+
+def drawRefSystem(ax, T_w_c, strStyle, nameStr):
+    """
+        Draw a reference system in a 3D plot: Red for X axis, Green for Y axis, and Blue for Z axis
+    -input:
+        ax: axis handle
+        T_w_c: (4x4 matrix) Reference system C seen from W.
+        strStyle: lines style.
+        nameStr: Name of the reference system.
+    """
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 0:1], strStyle, 'r', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 1:2], strStyle, 'g', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
+    ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
+
+
+def plot3DPoints(points_3d_pose, cameras, world_ref=True):
+    """
+    Visualiza puntos 3D junto con los sistemas de referencia de varias cámaras en un espacio 3D.
+
+    Parámetros:
+        points_3d_pose: Puntos 3D a visualizar (3, N)
+        cameras: Diccionario de cámaras con nombres como claves y matrices de transformación 4x4 como valores
+                 Ejemplo: {'C1': T_wc1, 'C2': T_wc2}
+        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
+    """
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Dibujar el sistema de referencia del mundo si se especifica
+    if world_ref:
+        drawRefSystem(ax, np.eye(4), '-', 'W')
+
+    # Dibujar cada sistema de referencia de cámara
+    for cam_name, T_wc in cameras.items():
+        drawRefSystem(ax, T_wc, '-', cam_name)
+
+    # Dibujar los puntos 3D
+    ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
+
+    # Crear una caja de límites para una visualización más equilibrada
+    bounding_box_size = 4
+    x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    ax.plot(x_fake, y_fake, z_fake, 'w.')
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
