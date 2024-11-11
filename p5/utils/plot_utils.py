@@ -101,17 +101,22 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
 
-def project_points_plot(image, xData, xProj, title):
-    plt.figure()
-    plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-    plotResidual(xData, xProj, 'k-')
-    plt.plot(xProj[0, :], xProj[1, :], 'bo')
-    plt.plot(xData[0, :], xData[1, :], 'rx')
-    plotNumberedImagePoints(xData[0:2, :], 'r', 4)
-    plt.title(title)
-    print('Close the figures to continue.')
-    plt.show()
+def project_points_plot(img_left, img_right, points_2d_left, points_2d_right):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
 
+    # Imagen izquierda con puntos proyectados
+    ax1.imshow(cv2.cvtColor(img_left, cv2.COLOR_BGR2RGB))
+    ax1.scatter(points_2d_left[0, :], points_2d_left[1, :], color='red', s=10, label='Proyección 3D')
+    ax1.set_title("Proyección de Puntos 3D en la Imagen Izquierda")
+    ax1.legend()
+
+    # Imagen derecha con puntos proyectados
+    ax2.imshow(cv2.cvtColor(img_right, cv2.COLOR_BGR2RGB))
+    ax2.scatter(points_2d_right[0, :], points_2d_right[1, :], color='blue', s=10, label='Proyección 3D')
+    ax2.set_title("Proyección de Puntos 3D en la Imagen Derecha")
+    ax2.legend()
+
+    plt.show()
 
 def visualize_projection(image, xData, xProj, title):
     plt.figure()

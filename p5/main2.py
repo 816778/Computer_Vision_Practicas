@@ -109,5 +109,10 @@ if __name__ == "__main__":
 
     points_3d = utils.triangulate_points(directions1, directions2, T_wc1, T_wc2)
 
-    plot_utils.project_points_plot(fisheye1_frameA, x1, points_3d, "Puntos 2D en la imagen izquierda")
+    exit()
+    points_2d_left = utils.project_points(points_3d, K_1, T_wc1)  # Para la cámara izquierda
+    points_2d_right = utils.project_points(points_3d, K_2, T_wc2)  # Para la cámara derecha
+
+
+    plot_utils.project_points_plot(fisheye1_frameA, fisheye1_frameB, points_2d_left, points_2d_right)
 

@@ -80,22 +80,6 @@ def ensamble_T(R_w_c, t_w_c) -> np.array:
     return np.linalg.inv(T_w_c)
 
 
-def project_points(K, T, X_w):
-    if T.shape == (3, 4):
-        T_hom = np.vstack([T, [0, 0, 0, 1]])
-    else:
-        T_hom = T
-
-    if X_w.shape[0] == 3:
-        X_w_hom = np.vstack([X_w, np.ones((1, X_w.shape[1]))])
-    else:
-        X_w_hom = X_w
-
-    x_proj_hom = K @ np.eye(3, 4) @ np.linalg.inv(T_hom) @ X_w_hom
-    x_proj = x_proj_hom / x_proj_hom[2, :]
-    return x_proj
-
-
 def crossMatrixInv(M):
     x = [M[2, 1], M[0, 2], M[1, 0]]
     return x
@@ -338,3 +322,28 @@ def triangulate_points(directions1, directions2, T_wc1, T_wc2):
 
     return np.array(points_3d).T
 
+
+
+def project_points(points_3d, K, T):
+    """
+    Proyecta puntos 3D a 2D usando una matriz intrínseca y una transformación.
+    
+    Parámetros:
+        points_3d: Puntos en 3D en el sistema de coordenadas mundial (3, N)
+        K: Matriz intrínseca de la cámara (3, 3)
+        T: Matriz de transformación de la cámara (4, 4)
+    
+    Retorno:
+        puntos_2d: Puntos proyectados en el plano de imagen (2, N)
+    """
+    # Convertir puntos 3D a coordenadas homogéneas (4, N)
+    points_3d_hom = np.vstack((points_3d, np.ones((1, points_3d.shape[1]))))
+    
+    # Matriz de proyección completa: K * [R | t]
+    P = K @ T[:3, :]  # Usamos solo las primeras 3 filas de T
+
+    # Proyectar puntos
+    points_2d_hom = P @ points_3d_hom
+    points_2d = points_2d_hom[:2, :] / points_2d_hom[2, :]  # Normalizar por coordenada z
+
+    return points_2d
