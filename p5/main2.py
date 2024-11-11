@@ -20,7 +20,7 @@ RESET = "\033[0m"
 
 def load_data():
     work_dir = "/home/hsunekichi/Desktop/Computer_Vision_Practicas/p5/data/"
-    work_dir = "data/"
+    #work_dir = "data/"
 
     D1_k_array = np.loadtxt(work_dir+"D1_k_array.txt")
     D2_k_array = np.loadtxt(work_dir+"D2_k_array.txt")

@@ -431,7 +431,7 @@ def triangulate_point(directions1, directions2, T_wc1, T_wc2, T_c1c2):
     X = Vt[-1]
     X /= X[3]  # Normalizar para obtener coordenadas homogéneas
 
-    return X[:3]
+    return (T_wc2 @ X)[:3] # To world coordinates
 
 def triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight):
     """
