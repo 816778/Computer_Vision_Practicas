@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
         x_coords = [368, 101, 200, 500, 363]
         y_coords = [390, 452, 247, 370, 112]
-        
+
         assert len(x_coords) == len(y_coords), "Las longitudes de x_coords y y_coords no coinciden"
         labels = [str(i+1) for i in range(len(x_coords))]
         plot_utils.show_points_on_image(x_coords, y_coords, labels, block=False)
