@@ -331,59 +331,6 @@ def kannala_brandt_unprojection_roots(u, K, D):
 
 
 
-
-def kannala_brandt_unprojection(u, K, D, tol=1e-6):
-    """
-    Desproyección de Kannala-Brandt (2D a 3D) usando np.roots para resolver la ecuación.
-    
-    Parámetros:
-        u: Coordenadas 2D en el plano de imagen (2, n)
-        K: Matriz intrínseca de la cámara (3, 3)
-        D: Array de coeficientes de distorsión (k1, k2, k3, k4)
-        tol: Tolerancia para verificar la cercanía al radio deseado
-        
-    Retorno:
-        Direcciones en el espacio 3D como un arreglo de (3, n)
-    """
-    # Extraer parámetros intrínsecos
-    alpha_x, alpha_y, alpha_z = K[0, 0], K[1, 1], K[2, 2]
-    c_x, c_y, c_z = K[0, 2], K[1, 2], K[2, 2]
-
-    # Coordenadas normalizadas en el plano de la cámara
-    x_c = (u[0, :] - c_x) / alpha_x
-    y_c = (u[1, :] - c_y) / alpha_y
-    z_c = (u[2, :] - c_z) / alpha_z
-
-    # Cálculo de r y phi
-    r = np.sqrt(x_c**2 + y_c**2)
-    phi = np.arctan2(y_c, x_c)
-
-    # Definir coeficientes del polinomio en theta
-    # r = theta + D[0] * theta**3 + D[1] * theta**5 + D[2] * theta**7 + D[3] * theta**9
-    poly_coeffs = [D[3], 0, D[2], 0, D[1], 0, D[0], 0, 1, -r]
-    
-    # Calcular raíces del polinomio
-    theta_roots = np.roots(np.isreal(poly_coeffs))
-    print(theta_roots)
-    theta_real = theta_roots.real[abs(theta_roots.imag)<1e-5]
-
-    # Verificar si hay raíces reales
-    if len(theta_real) == 0:
-        raise ValueError("No real solution found for theta.")
-
-    # Seleccionar la raíz más cercana a r como solución
-    #theta = theta_real[np.argmin(np.abs(theta_real - r))]
-    theta = theta_real[0]
-
-    # Calcular la dirección en el espacio 3D
-    v_x = np.sin(theta) * np.cos(phi)
-    v_y = np.sin(theta) * np.sin(phi)
-    v_z = np.cos(theta)
-    
-    return np.vstack((v_x, v_y, v_z))
-
-
-
 ##################################################################
 ## TRIANGULATE POINTS
 def define_planes(v):
@@ -454,26 +401,100 @@ def triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight):
     return np.array(points_3d).T
 
 
-def project_points(points_3d, K, T):
+
+##################################################################
+# BUNDLE ADJUSTMENT
+##################################################################
+def project_points_fisheye(points_3D, K, D, T_wc):
     """
-    Proyecta puntos 3D a 2D usando una matriz intrínseca y una transformación.
+    Proyecta un punto 3D usando el modelo de lente ojo de pez Kannala-Brandt.
     
     Parámetros:
-        points_3d: Puntos en 3D en el sistema de coordenadas mundial (3, N)
-        K: Matriz intrínseca de la cámara (3, 3)
-        T: Matriz de transformación de la cámara (4, 4)
-    
+        point_3D: Coordenada del punto en el espacio.
+        K: Matriz intrínseca de la cámara.
+        D: Coeficientes de distorsión.
+        T_wc: Transformación de la cámara en el sistema de referencia.
+
     Retorno:
-        puntos_2d: Puntos proyectados en el plano de imagen (2, N)
+        Punto proyectado en 2D en la imagen de la cámara.
     """
-    # Convertir puntos 3D a coordenadas homogéneas (4, N)
-    points_3d_hom = np.vstack((points_3d, np.ones((1, points_3d.shape[1]))))
+    # Transformar el punto al sistema de la cámara
+    # print("Shape point_3D: ", point_3D.shape)
+    # print("Shape T_wc: ", T_wc.shape)
     
-    # Matriz de proyección completa: K * [R | t]
-    P = K @ T[:3, :]  # Usamos solo las primeras 3 filas de T
 
-    # Proyectar puntos
-    points_2d_hom = P @ points_3d_hom
-    points_2d = points_2d_hom[:2, :] / points_2d_hom[2, :]  # Normalizar por coordenada z
+    num_points = points_3D.shape[1]
+    points_3D_hom = np.vstack((points_3D, np.ones((1, num_points))))
+    points_cam_hom = T_wc @ points_3D_hom 
+    points_cam = points_cam_hom[:3, :] / points_cam_hom[3, :]
 
-    return points_2d
+    projected_2D = kannala_brandt_projection(points_cam, K, D)
+    
+    return projected_2D
+
+
+def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2, nImages):
+
+    X_w = params[nImages*6:].reshape(-1, 3).T
+    residuals = np.array([])
+
+    for i in range(nImages):
+        t = params[i*6:(i*6)+3]
+        th = params[(i*6)+3:(i*6)+6]
+        R = expm(crossMatrix(th))
+
+        T_wc = np.eye(4)
+        T_wc[:3, :3] = R
+        T_wc[:3, 3] = t
+
+        if i == 0 or i == 1:
+            x_proj = project_points_fisheye(X_w, K_1, D1_k_array, T_wc1 @ T_wc)
+        elif i == 2 or i == 3:
+            x_proj = project_points_fisheye(X_w, K_2, D2_k_array, T_wc2 @ T_wc)
+       
+
+        residuals = np.hstack((residuals,
+            ((x_proj[:2, :] - xData[i][:2, :])).flatten()
+        ))
+
+    print("Residuals: ", residuals.mean())
+
+    return residuals
+
+
+def run_bundle_adjustment_fisheye(T, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2):
+    if X_w.shape[0] == 4:
+        X_w = (X_w[:3, :] / X_w[3, :])
+    
+    nImages = len(T)
+
+    T_flat = np.array([])
+    for i in range(nImages):
+        t = T[i][:3, 3]
+        R = T[i][:3, :3]
+        th = crossMatrixInv(logm(R))
+        T_flat = np.hstack((T_flat, t, th))
+
+    X_w_flat = X_w.T.flatten()
+
+    initial_params = np.hstack((T_flat, X_w_flat))
+    
+    result = scOptim.least_squares(residual_bundle_adjustment_fisheye, initial_params,
+                                   args=(K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2, nImages), method='lm')
+    
+    optimized_params = result.x
+
+    T_opt = []
+    for i in range(nImages):
+        t = optimized_params[i*6:(i*6)+3]
+        th = optimized_params[(i*6)+3:(i*6)+6]
+        R = expm(crossMatrix(th))
+
+        T_wc = np.zeros((3, 4))
+        T_wc[:3, :3] = R
+        T_wc[:3, 3] = t
+        T_opt.append(T_wc)
+
+    X_w_opt = optimized_params[nImages*6:].reshape(-1, 3).T
+
+    return T_opt, X_w_opt
