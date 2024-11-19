@@ -433,68 +433,85 @@ def project_points_fisheye(points_3D, K, D, T_wc):
     return projected_2D
 
 
-def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2, nImages):
+def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2):
 
-    X_w = params[nImages*6:].reshape(-1, 3).T
+    X_w = params[6:].reshape(-1, 3).T
+    num_points = X_w.shape[1]
+
+
+    t_wAwB = params[:3]
+    th_wAwB = params[3:6]
+    R_wAwB = expm(crossMatrix(th_wAwB))
+
+    T_wAwB = np.eye(4)
+    T_wAwB[:3, :3] = R_wAwB
+    T_wAwB[:3, 3] = t_wAwB
+
     residuals = np.array([])
 
-    for i in range(nImages):
-        t = params[i*6:(i*6)+3]
-        th = params[(i*6)+3:(i*6)+6]
-        R = expm(crossMatrix(th))
+    x1, x2, x3, x4 = xData
 
-        T_wc = np.eye(4)
-        T_wc[:3, :3] = R
-        T_wc[:3, 3] = t
+    X_c1_A = np.linalg.inv(T_wc1) @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
+    x1_proj_2d = kannala_brandt_projection(X_c1_A[:3, :], K_1, D1_k_array)
+    x1_proj = np.vstack((x1_proj_2d, np.ones((1, x1_proj_2d.shape[1]))))
+    
+    # Project points for camera 2, pose A
+    X_c2_A = np.linalg.inv(T_wc2) @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
+    x2_proj_2d = kannala_brandt_projection(X_c2_A[:3, :], K_2, D2_k_array)
+    x2_proj = np.vstack((x2_proj_2d, np.ones((1, x2_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
+    
+    X_w_B = T_wAwB @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
+    
+    # Project points for camera 1, pose B
+    X_c1_B = np.linalg.inv(T_wc1) @ X_w_B
+    x3_proj_2d = kannala_brandt_projection(X_c1_B[:3, :], K_1, D1_k_array)
+    x3_proj = np.vstack((x3_proj_2d, np.ones((1, x3_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
+    
+    
+    # Project points for camera 2, pose B
+    X_c2_B = np.linalg.inv(T_wc2) @ X_w_B
+    x4_proj_2d = kannala_brandt_projection(X_c2_B[:3, :], K_2, D2_k_array)
+    x4_proj = np.vstack((x4_proj_2d, np.ones((1, x4_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
+    
+    
+    # Compute residuals
+    residuals_1 = (x1 - x1_proj).flatten()
+    residuals_2 = (x2 - x2_proj).flatten()
+    residuals_3 = (x3 - x3_proj).flatten()
+    residuals_4 = (x4 - x4_proj).flatten()
 
-        if i == 0 or i == 1:
-            x_proj = project_points_fisheye(X_w, K_1, D1_k_array, T_wc1 @ T_wc)
-        elif i == 2 or i == 3:
-            x_proj = project_points_fisheye(X_w, K_2, D2_k_array, T_wc2 @ T_wc)
-       
-
-        residuals = np.hstack((residuals,
-            ((x_proj[:2, :] - xData[i][:2, :])).flatten()
-        ))
+    residuals = np.hstack((residuals_1, residuals_2, residuals_3, residuals_4))
 
     print("Residuals: ", residuals.mean())
 
     return residuals
 
 
-def run_bundle_adjustment_fisheye(T, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2):
+def run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2):
     if X_w.shape[0] == 4:
         X_w = (X_w[:3, :] / X_w[3, :])
+
+    t_wAwB = T_wAwB_seed[:3, 3]
+    R_wAwB = T_wAwB_seed[:3, :3]
+    th_wAwB = crossMatrixInv(logm(R_wAwB))
+
+    initial_params = np.hstack((t_wAwB, th_wAwB, X_w.T.flatten()))
     
-    nImages = len(T)
-
-    T_flat = np.array([])
-    for i in range(nImages):
-        t = T[i][:3, 3]
-        R = T[i][:3, :3]
-        th = crossMatrixInv(logm(R))
-        T_flat = np.hstack((T_flat, t, th))
-
-    X_w_flat = X_w.T.flatten()
-
-    initial_params = np.hstack((T_flat, X_w_flat))
     
     result = scOptim.least_squares(residual_bundle_adjustment_fisheye, initial_params,
-                                   args=(K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2, nImages), method='lm')
+                                   args=(K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2), method='lm')
     
     optimized_params = result.x
 
-    T_opt = []
-    for i in range(nImages):
-        t = optimized_params[i*6:(i*6)+3]
-        th = optimized_params[(i*6)+3:(i*6)+6]
-        R = expm(crossMatrix(th))
+    t_wAwB_opt = optimized_params[:3]
+    th_wAwB_opt = optimized_params[3:6]
+    R_wAwB_opt = expm(crossMatrix(th_wAwB_opt))
 
-        T_wc = np.zeros((3, 4))
-        T_wc[:3, :3] = R
-        T_wc[:3, 3] = t
-        T_opt.append(T_wc)
+    T_wAwB_opt = np.eye(4)
+    T_wAwB_opt[:3, :3] = R_wAwB_opt
+    T_wAwB_opt[:3, 3] = t_wAwB_opt
 
-    X_w_opt = optimized_params[nImages*6:].reshape(-1, 3).T
-
-    return T_opt, X_w_opt
+    # Extraer puntos 3D optimizados
+    X_w_opt = optimized_params[6:].reshape(-1, 3).T
+    
+    return T_wAwB_opt, X_w_opt

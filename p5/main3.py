@@ -61,6 +61,66 @@ def load_images():
 
 
 
+import numpy as np
+
+def test_transformation_equality(T_wAwB_opt, T_wAwB_gt, tol_rotation=1e-6, tol_translation=1e-6):
+    """
+    Test if T_wAwB_opt is equal to T_wAwB_gt within tolerances.
+    
+    Args:
+        T_wAwB_opt: Optimized transformation matrix (4x4).
+        T_wAwB_gt: Ground truth transformation matrix (4x4).
+        tol_rotation: Tolerance for rotational difference (radians).
+        tol_translation: Tolerance for translational difference (meters).
+    
+    Returns:
+        result: Boolean indicating if the two transformations are approximately equal.
+        details: Dictionary with rotation and translation errors.
+    """
+    # Extract rotation and translation components
+    R_opt = T_wAwB_opt[:3, :3]
+    t_opt = T_wAwB_opt[:3, 3]
+    
+    R_gt = T_wAwB_gt[:3, :3]
+    t_gt = T_wAwB_gt[:3, 3]
+    
+    # Calculate rotation difference using the angle of the rotation matrix
+    R_diff = np.dot(R_gt.T, R_opt)
+    trace_R_diff = np.trace(R_diff)
+    rotation_error = np.arccos(np.clip((trace_R_diff - 1) / 2, -1.0, 1.0))  # Angle in radians
+    
+    # Calculate translation difference (Euclidean distance)
+    translation_error = np.linalg.norm(t_opt - t_gt)
+    
+    # Check if errors are within tolerances
+    rotation_match = rotation_error <= tol_rotation
+    translation_match = translation_error <= tol_translation
+    
+    result = rotation_match and translation_match
+    
+    # Return detailed results
+    details = {
+        "rotation_error (rad)": rotation_error,
+        "translation_error": translation_error,
+        "rotation_match": rotation_match,
+        "translation_match": translation_match,
+        "result": result
+    }
+    
+
+    # Mostrar resultados
+    if result:
+        print(f"{GREEN}Las matrices de transformación son equivalentes dentro de las tolerancias.{RESET}")
+    else:
+        print(f"{RED}Las matrices de transformación NO son equivalentes.{RESET}")
+    print(f"{RED}########################################################################")
+    print(details)
+    print(f"########################################################################{RESET}")
+    
+
+
+
+
 if __name__ == "__main__":
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
@@ -75,14 +135,18 @@ if __name__ == "__main__":
     xData = [x1, x2, x3, x4]
     T = [T_wAwB_seed for _ in range(4)]
 
-    T_opt, X_w_opt = utils.run_bundle_adjustment_fisheye(T, K_1, K_2, D1_k_array, D2_k_array, points_3d_pose_A, xData, T_wc1, T_wc2)
+    T_wAwB_opt, X_w_opt = utils.run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, points_3d_pose_A, xData, T_wc1, T_wc2)
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, T_wc4_opt = T_opt
+    T_wc1_B = T_wAwB_opt @ T_wc1
+    T_wc2_B = T_wAwB_opt @ T_wc2
+
+    test_transformation_equality(T_wAwB_opt, T_wAwB_gt)
+
     cameras = {
-        'C1': T_wc1_opt,  
-        'C2': T_wc2_opt,
-        'C3': T_wc3_opt,
-        'C4': T_wc4_opt  
+        'C1': T_wc1,  
+        'C2': T_wc2,
+        'C1_B': T_wc1_B,
+        'C2_B': T_wc2_B
     }
 
     plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)

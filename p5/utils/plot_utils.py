@@ -218,7 +218,7 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
 
-def plot3DPoints(points_3d_pose, cameras, world_ref=True):
+def plot3DPoints(points_3d_pose, cameras, world_ref=True, bounding_box_size=1):
     """
     Visualiza puntos 3D junto con los sistemas de referencia de varias cámaras en un espacio 3D.
 
@@ -246,7 +246,6 @@ def plot3DPoints(points_3d_pose, cameras, world_ref=True):
     ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
 
     # Crear una caja de límites para una visualización más equilibrada
-    bounding_box_size = 4
     x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
     y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
     z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
