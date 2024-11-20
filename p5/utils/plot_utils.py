@@ -118,7 +118,7 @@ def visualize_triangulation_results(fisheye1_image, fisheye2_image, points_2d_le
 
 
 
-def visualize_projection(image, xData, xProj, title):
+def visualize_projection(image, xData, xProj, title, block=True):
     plt.figure()
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
     plotResidual(xData, xProj, 'k-')
@@ -127,7 +127,7 @@ def visualize_projection(image, xData, xProj, title):
     plotNumberedImagePoints(xData[0:2, :], 'r', 4)
     plt.title(title)
     print('Close the figures to continue.')
-    plt.show()
+    plt.show(block=block)
     
 
 ##############################################################################
@@ -218,7 +218,7 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
 
-def plot3DPoints(points_3d_pose, cameras, world_ref=True, bounding_box_size=1):
+def plot3DPoints(points_3d_pose, cameras, world_ref=True, bounding_box_size=1, block=True):
     """
     Visualiza puntos 3D junto con los sistemas de referencia de varias cámaras en un espacio 3D.
 
@@ -252,4 +252,4 @@ def plot3DPoints(points_3d_pose, cameras, world_ref=True, bounding_box_size=1):
     ax.plot(x_fake, y_fake, z_fake, 'w.')
 
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
+    plt.show(block=block)

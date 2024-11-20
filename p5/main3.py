@@ -122,33 +122,50 @@ def test_transformation_equality(T_wAwB_opt, T_wAwB_gt, tol_rotation=1e-6, tol_t
 
 
 if __name__ == "__main__":
+
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
     D1_k_array, D2_k_array, K_1, K_2, T_leftRight, T_wAwB_gt, T_wAwB_seed, x1, x2, x3, x4, T_wc1, T_wc2 = load_data()
+    fisheye1_frameA, fisheye1_frameB, fisheye2_frameA, fisheye2_frameB = load_images()
 
-    directions1 = utils.kannala_brandt_unprojection_roots(x1, K_1, D1_k_array)  
-    directions2 = utils.kannala_brandt_unprojection_roots(x2, K_2, D2_k_array)
+    calibration1 = (K_1, D1_k_array, None)
+    calibration2 = (K_2, D2_k_array, None)
 
-    points_3d_pose_A = utils.triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight)
-    print("Shape of 3D points: ", points_3d_pose_A.shape)
+
+    X_w = utils.triangulate_points(x1, x2, T_wc1, T_wc2, calibration1, calibration2)
+    
+    x_proj1A = utils.project_points_fisheye(T_wc1, calibration1, X_w)
+    x_proj2A = utils.project_points_fisheye(T_wc2, calibration2, X_w)
 
     xData = [x1, x2, x3, x4]
-    T = [T_wAwB_seed for _ in range(4)]
+    T_wAwB = T_wAwB_gt
 
-    T_wAwB_opt, X_w_opt = utils.run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, points_3d_pose_A, xData, T_wc1, T_wc2)
+    #T_wAwB, X_w = utils.run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2)
 
-    T_wc1_B = T_wAwB_opt @ T_wc1
-    T_wc2_B = T_wAwB_opt @ T_wc2
+    T_wBwA = np.linalg.inv(T_wAwB)    
 
-    test_transformation_equality(T_wAwB_opt, T_wAwB_gt)
+    T_wBc1 = T_wBwA @ T_wc1
+    T_wBc2 = T_wBwA @ T_wc2
+
+    test_transformation_equality(T_wAwB, T_wAwB_gt)
 
     cameras = {
         'C1': T_wc1,  
         'C2': T_wc2,
-        'C1_B': T_wc1_B,
-        'C2_B': T_wc2_B
+        'C1_B': T_wBc1,
+        'C2_B': T_wBc2
     }
 
-    plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)
+    plot_utils.plot3DPoints(X_w, cameras, world_ref=False, block=False)
 
-    fisheye1_frameA, fisheye1_frameB, fisheye2_frameA, fisheye2_frameB = load_images()
+    x_proj1A = utils.project_points_fisheye(T_wc1, (K_1, D1_k_array, None), X_w)
+    x_proj2A = utils.project_points_fisheye(T_wc2, (K_2, D2_k_array, None), X_w)
+    x_proj1B = utils.project_points_fisheye(T_wBc1, (K_1, D1_k_array, None), X_w)
+    x_proj2B = utils.project_points_fisheye(T_wBc2, (K_2, D2_k_array, None), X_w)
+
+
+    plot_utils.visualize_projection(fisheye1_frameA, x1, x_proj1A, "C1A", False)
+    plot_utils.visualize_projection(fisheye2_frameA, x2, x_proj2A, "C2A", False)
+
+    plot_utils.visualize_projection(fisheye1_frameB, x3, x_proj1B, "C1B", False)
+    plot_utils.visualize_projection(fisheye2_frameB, x4, x_proj2B, "C2B")

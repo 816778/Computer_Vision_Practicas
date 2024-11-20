@@ -343,33 +343,34 @@ def define_planes(v):
     Retorno:
         Pi_sym, Pi_perp: Los planos definidos por el vector v
     """
-    vx, vy, vz = v
-    Pi_sym = np.array([-vy, vx, 0, 0])  # Pi_sym según la imagen
-    Pi_perp = np.array([-vx * vy, -vy**2, vx**2 + vy**2, 0])  # Pi_perp según la imagen
+    vx = v[0]
+    vy = v[1]
+    vz = v[2]
+
+    Pi_sym = np.array([-vy, vx, 0, 0]).T  # Pi_sym según la imagen
+    Pi_perp = np.array([-vz * vx, -vz*vy, vx*vx + vy*vy, 0]).T  # Pi_perp según la imagen
     return Pi_sym, Pi_perp
 
-
-def triangulate_point(directions1, directions2, T_wc1, T_wc2, T_c1c2):
+def triangulate_point(T_c1c2, v1, v2):
     """
     Triangula un punto 3D usando la técnica de triangulación basada en planos.
     
     Parámetros:
-        directions1: Direcciones en la cámara 1 (3,)
-        directions2: Direcciones en la cámara 2 (3,)
         T_wc1: Transformación de la cámara 1 al sistema mundial (4, 4)
         T_wc2: Transformación de la cámara 2 al sistema mundial (4, 4)
-    
+        directions1: Direcciones en la cámara 1 (3,)
+        directions2: Direcciones en la cámara 2 (3,)
+
     Retorno:
         Punto 3D en coordenadas homogéneas.
     """
     # Definir los planos en el sistema de la primera cámara
-    Pi_sym_1, Pi_perp_1 = define_planes(directions1)
-    Pi_sym_2, Pi_perp_2 = define_planes(directions2)
+    Pi_sym_1, Pi_perp_1 = define_planes(v1)
+    Pi_sym_2, Pi_perp_2 = define_planes(v2)
 
-    # Transformar los planos al sistema de la segunda cámara
     Pi_sym_2_1 = T_c1c2.T @ Pi_sym_1
     Pi_perp_2_1 = T_c1c2.T @ Pi_perp_1
-
+    
     # Construir la matriz A para el sistema AX = 0
     A = np.vstack((Pi_sym_2_1.T, Pi_perp_2_1.T, Pi_sym_2.T, Pi_perp_2.T))
 
@@ -378,9 +379,10 @@ def triangulate_point(directions1, directions2, T_wc1, T_wc2, T_c1c2):
     X = Vt[-1]
     X /= X[3]  # Normalizar para obtener coordenadas homogéneas
 
-    return (T_wc2 @ X)[:3] # To world coordinates
+    return X
 
-def triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight):
+
+def triangulate_points(uv1, uv2, T_wc1, T_wc2, K1, K2):
     """
     Triangula múltiples puntos 3D para un sistema estéreo.
     
@@ -393,50 +395,138 @@ def triangulate_points(directions1, directions2, T_wc1, T_wc2, T_leftRight):
     Retorno:
         Puntos 3D triangulados (3, N).
     """
-    points_3d = []
-    for v1, v2 in zip(directions1.T, directions2.T):
-        X = triangulate_point(v1, v2, T_wc1, T_wc2, T_leftRight)
-        points_3d.append(X)
+    
+    directions1 = unproject_points(uv1, K1)  
+    directions2 = unproject_points(uv2, K2)
 
-    return np.array(points_3d).T
+    points_3d = np.empty((4, uv1.shape[1]))
+    T_c1c2 = np.linalg.inv(T_wc1) @ T_wc2
 
+    for i in range(directions1.shape[1]):
+        v1 = directions1[:, i]
+        v2 = directions2[:, i]
+
+        # Returns the point in C2 coordinates
+        points_3d[:, i] = triangulate_point(T_c1c2, v1, v2)
+
+    # To C1 coordinates
+    return (T_wc2 @ points_3d)[:3, :]
 
 
 ##################################################################
 # BUNDLE ADJUSTMENT
 ##################################################################
-def project_points_fisheye(points_3D, K, D, T_wc):
+
+def project_points_fisheye(T_wc, calibration, X_w):
     """
-    Proyecta un punto 3D usando el modelo de lente ojo de pez Kannala-Brandt.
+    Proyección de Kannala-Brandt (3D a 2D).
     
     Parámetros:
-        point_3D: Coordenada del punto en el espacio.
-        K: Matriz intrínseca de la cámara.
-        D: Coeficientes de distorsión.
-        T_wc: Transformación de la cámara en el sistema de referencia.
-
+        X: Arreglo de puntos 3D de forma (3, n)
+        K: Matriz intrínseca de la cámara (3, 3)
+        D: Array de coeficientes de distorsión (k1, k2, k3, k4)
+        
     Retorno:
-        Punto proyectado en 2D en la imagen de la cámara.
+        Coordenadas 2D proyectadas en el plano de imagen en forma de arreglo (2, n)
     """
-    # Transformar el punto al sistema de la cámara
-    # print("Shape point_3D: ", point_3D.shape)
-    # print("Shape T_wc: ", T_wc.shape)
-    
 
-    num_points = points_3D.shape[1]
-    points_3D_hom = np.vstack((points_3D, np.ones((1, num_points))))
-    points_cam_hom = T_wc @ points_3D_hom 
-    points_cam = points_cam_hom[:3, :] / points_cam_hom[3, :]
+    if X_w.shape[0] == 3:
+        X_w_hom = np.vstack([X_w, np.ones((1, X_w.shape[1]))])
+    else:
+        X_w_hom = X_w
 
-    projected_2D = kannala_brandt_projection(points_cam, K, D)
+    K, D, _ = calibration
+
+    X_c = np.linalg.inv(T_wc) @ X_w_hom
+
+    # Extracción de parámetros intrínsecos
+    alpha_x, alpha_y = K[0, 0], K[1, 1]
+    c_x, c_y = K[0, 2], K[1, 2]
+
+    x, y, z = X_c[0, :], X_c[1, :], X_c[2, :]
     
-    return projected_2D
+    R = np.sqrt(x**2 + y**2)
+    theta = np.arctan2(R, z)
+    
+    d_theta = theta + D[0] * theta**3 + D[1] * theta**5 + D[2] * theta**7 + D[3] * theta**9
+
+    phi = np.arctan2(y, x)
+    
+    u = alpha_x * d_theta * np.cos(phi) + c_x
+    v = alpha_y * d_theta * np.sin(phi) + c_y
+    ones = np.ones(u.shape)
+
+    return np.vstack((u, v, ones))
+
+
+def unproject_points(uv, calibration):
+    """
+    Desproyección de Kannala-Brandt (2D a 3D) usando raíces de un polinomio de noveno grado.
+    
+    Parámetros:
+        u: Coordenadas 2D en el plano de imagen (2, n)
+        K: Matriz intrínseca de la cámara (3, 3)
+        D: Array de coeficientes de distorsión [k1, k2, k3, k4]
+        
+    Retorno:
+        Direcciones en el espacio 3D como un arreglo de (3, n)
+    """
+    K, D, _ = calibration
+
+    # Extraer parámetros intrínsecos
+    K_inv = np.linalg.inv(K)
+    
+    if uv.shape[0] == 2:
+        uv = np.vstack((uv, np.ones(uv.shape[1])))
+
+    # Coordenadas normalizadas en el plano de la cámara
+    x_c = K_inv @ uv
+
+    # Cálculo de r y phi
+    r = np.sqrt((x_c[0]**2 + x_c[1]**2) / x_c[2]**2)
+
+    phi = np.arctan2(x_c[1], x_c[0])
+    
+    # Coeficientes de distorsión
+
+    k1, k2, k3, k4, _ = D
+
+    # Array para almacenar los valores de theta para cada punto
+    theta_values = []
+    
+    # Resolver el polinomio para cada valor de r
+    for radius in r:
+        # Construir los coeficientes del polinomio en función del valor actual de r
+        poly_coeffs = [k4, 0, k3, 0, k2, 0, k1, 0, 1, -radius]  # Coeficientes para el polinomio en theta
+
+        # Resolver el polinomio para theta usando np.roots
+        roots = np.roots(poly_coeffs)
+
+        # Filtrar solo las raíces reales
+        real_roots = roots[np.isreal(roots)].real
+
+        # Seleccionar la raíz real positiva más cercana a radius como theta
+        if len(real_roots) > 0:
+            theta = real_roots[np.argmin(np.abs(real_roots - radius))]
+        else:
+            theta = 0  # Si no hay raíces reales, usamos 0 como fallback
+        theta_values.append(theta)
+    
+    theta_values = np.array(theta_values)
+
+    # Calcular la dirección en el espacio 3D
+    v_x = np.sin(theta_values) * np.cos(phi)
+    v_y = np.sin(theta_values) * np.sin(phi)
+    v_z = np.cos(theta_values)
+    ones = np.ones(v_x.shape)
+    
+    return np.vstack((v_x, v_y, v_z, ones))
+
 
 
 def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array, xData, T_wc1, T_wc2):
 
     X_w = params[6:].reshape(-1, 3).T
-    num_points = X_w.shape[1]
 
 
     t_wAwB = params[:3]
@@ -447,31 +537,25 @@ def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array,
     T_wAwB[:3, :3] = R_wAwB
     T_wAwB[:3, 3] = t_wAwB
 
+    T_wBwA = np.linalg.inv(T_wAwB)
+
     residuals = np.array([])
 
     x1, x2, x3, x4 = xData
+    calibration1 = (K_1, D1_k_array, None)
+    calibration2 = (K_2, D2_k_array, None)
 
-    X_c1_A = np.linalg.inv(T_wc1) @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
-    x1_proj_2d = kannala_brandt_projection(X_c1_A[:3, :], K_1, D1_k_array)
-    x1_proj = np.vstack((x1_proj_2d, np.ones((1, x1_proj_2d.shape[1]))))
-    
-    # Project points for camera 2, pose A
-    X_c2_A = np.linalg.inv(T_wc2) @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
-    x2_proj_2d = kannala_brandt_projection(X_c2_A[:3, :], K_2, D2_k_array)
-    x2_proj = np.vstack((x2_proj_2d, np.ones((1, x2_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
-    
-    X_w_B = T_wAwB @ np.vstack((X_w, np.ones((1, X_w.shape[1]))))
-    
-    # Project points for camera 1, pose B
-    X_c1_B = np.linalg.inv(T_wc1) @ X_w_B
-    x3_proj_2d = kannala_brandt_projection(X_c1_B[:3, :], K_1, D1_k_array)
-    x3_proj = np.vstack((x3_proj_2d, np.ones((1, x3_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
-    
-    
-    # Project points for camera 2, pose B
-    X_c2_B = np.linalg.inv(T_wc2) @ X_w_B
-    x4_proj_2d = kannala_brandt_projection(X_c2_B[:3, :], K_2, D2_k_array)
-    x4_proj = np.vstack((x4_proj_2d, np.ones((1, x4_proj_2d.shape[1]))))  # Convert to homogeneous coordinates
+    T_wAc1 = T_wc1
+    T_wAc2 = T_wc2
+
+    T_wBc1 = T_wBwA @ T_wAc1
+    T_wBc2 = T_wBwA @ T_wAc2
+
+    x1_proj = project_points_fisheye(T_wAc1, calibration1, X_w)
+    x2_proj = project_points_fisheye(T_wAc2, calibration2, X_w)
+        
+    x3_proj = project_points_fisheye(T_wBc1, calibration1, X_w)
+    x4_proj = project_points_fisheye(T_wBc2, calibration2, X_w)
     
     
     # Compute residuals
@@ -482,7 +566,7 @@ def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array,
 
     residuals = np.hstack((residuals_1, residuals_2, residuals_3, residuals_4))
 
-    print("Residuals: ", residuals.mean())
+    #print("Residuals: ", residuals.mean())
 
     return residuals
 
