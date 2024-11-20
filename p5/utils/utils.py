@@ -537,8 +537,6 @@ def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array,
     T_wAwB[:3, :3] = R_wAwB
     T_wAwB[:3, 3] = t_wAwB
 
-    T_wBwA = np.linalg.inv(T_wAwB)
-
     residuals = np.array([])
 
     x1, x2, x3, x4 = xData
@@ -548,8 +546,8 @@ def residual_bundle_adjustment_fisheye(params, K_1, K_2, D1_k_array, D2_k_array,
     T_wAc1 = T_wc1
     T_wAc2 = T_wc2
 
-    T_wBc1 = T_wBwA @ T_wAc1
-    T_wBc2 = T_wBwA @ T_wAc2
+    T_wBc1 = T_wAwB @ T_wc1
+    T_wBc2 = T_wAwB @ T_wc2
 
     x1_proj = project_points_fisheye(T_wAc1, calibration1, X_w)
     x2_proj = project_points_fisheye(T_wAc2, calibration2, X_w)

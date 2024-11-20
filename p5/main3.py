@@ -138,30 +138,27 @@ if __name__ == "__main__":
     x_proj2A = utils.project_points_fisheye(T_wc2, calibration2, X_w)
 
     xData = [x1, x2, x3, x4]
-    T_wAwB = T_wAwB_gt
 
-    #T_wAwB, X_w = utils.run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2)
+    T_wAwB, X_w = utils.run_bundle_adjustment_fisheye(T_wAwB_seed, K_1, K_2, D1_k_array, D2_k_array, X_w, xData, T_wc1, T_wc2)
 
-    T_wBwA = np.linalg.inv(T_wAwB)    
-
-    T_wBc1 = T_wBwA @ T_wc1
-    T_wBc2 = T_wBwA @ T_wc2
+    T_wc1B = T_wAwB @ T_wc1
+    T_wc2B = T_wAwB @ T_wc2
 
     test_transformation_equality(T_wAwB, T_wAwB_gt)
 
     cameras = {
         'C1': T_wc1,  
         'C2': T_wc2,
-        'C1_B': T_wBc1,
-        'C2_B': T_wBc2
+        'C1_B': T_wc1B,
+        'C2_B': T_wc2B
     }
 
     plot_utils.plot3DPoints(X_w, cameras, world_ref=False, block=False)
 
     x_proj1A = utils.project_points_fisheye(T_wc1, (K_1, D1_k_array, None), X_w)
     x_proj2A = utils.project_points_fisheye(T_wc2, (K_2, D2_k_array, None), X_w)
-    x_proj1B = utils.project_points_fisheye(T_wBc1, (K_1, D1_k_array, None), X_w)
-    x_proj2B = utils.project_points_fisheye(T_wBc2, (K_2, D2_k_array, None), X_w)
+    x_proj1B = utils.project_points_fisheye(T_wc1B, (K_1, D1_k_array, None), X_w)
+    x_proj2B = utils.project_points_fisheye(T_wc2B, (K_2, D2_k_array, None), X_w)
 
 
     plot_utils.visualize_projection(fisheye1_frameA, x1, x_proj1A, "C1A", False)
@@ -169,3 +166,8 @@ if __name__ == "__main__":
 
     plot_utils.visualize_projection(fisheye1_frameB, x3, x_proj1B, "C1B", False)
     plot_utils.visualize_projection(fisheye2_frameB, x4, x_proj2B, "C2B")
+
+    print("C1A", plot_utils.computeRMSE(x1, x_proj1A))
+    print("C2A", plot_utils.computeRMSE(x2, x_proj2A))
+    print("C1B", plot_utils.computeRMSE(x3, x_proj1B))
+    print("C2B", plot_utils.computeRMSE(x4, x_proj2B))

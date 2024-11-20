@@ -59,6 +59,18 @@ def plotNumberedImagePoints(x,strColor,offset):
     for k in range(x.shape[1]):
         plt.text(x[0, k]+offset, x[1, k]+offset, str(k), color=strColor)
 
+
+def computeRMSE(xData, xProj):
+    """
+    Compute the Root Mean Square Error between the data and the projection.
+    -input:
+        xData: Data points.
+        xProj: Projected points.
+    -output:
+        rmse: Root Mean Square Error.
+    """
+    return np.sqrt(np.mean(np.sum((xData-xProj)**2, axis=0)))
+
 def plotNumbered3DPoints(ax, X,strColor, offset):
     """
         Plot indexes of points on a 3D plot.
