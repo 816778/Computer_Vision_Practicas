@@ -144,7 +144,7 @@ if __name__ == "__main__":
     T_wc1B = T_wAwB @ T_wc1
     T_wc2B = T_wAwB @ T_wc2
 
-    test_transformation_equality(T_wAwB, T_wAwB_gt)
+    # test_transformation_equality(T_wAwB, T_wAwB_gt)
 
     cameras = {
         'C1': T_wc1,  

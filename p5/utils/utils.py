@@ -419,15 +419,21 @@ def triangulate_points(uv1, uv2, T_wc1, T_wc2, K1, K2):
 
 def project_points_fisheye(T_wc, calibration, X_w):
     """
-    Proyección de Kannala-Brandt (3D a 2D).
+    Proyección de puntos 3D a coordenadas 2D en una cámara con modelo de lente ojo de pez 
+    (Kannala-Brandt).
     
     Parámetros:
-        X: Arreglo de puntos 3D de forma (3, n)
-        K: Matriz intrínseca de la cámara (3, 3)
-        D: Array de coeficientes de distorsión (k1, k2, k3, k4)
-        
+        T_wc: Transformación del sistema de coordenadas del mundo a la cámara (matriz 4x4).
+        calibration: Tupla que contiene:
+            - K: Matriz intrínseca de la cámara (3x3).
+            - D: Array de coeficientes de distorsión (k1, k2, k3, k4).
+            - Otros parámetros no utilizados.
+        X_w: Puntos 3D en coordenadas del sistema mundial, de forma (3, n) o (4, n) 
+             en coordenadas homogéneas.
+             
     Retorno:
-        Coordenadas 2D proyectadas en el plano de imagen en forma de arreglo (2, n)
+        Coordenadas 2D proyectadas en el plano de la imagen, en forma de arreglo (3, n).
+        La tercera fila contiene unos para mantener formato homogéneo.
     """
 
     if X_w.shape[0] == 3:

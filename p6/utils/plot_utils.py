@@ -265,3 +265,69 @@ def plot3DPoints(points_3d_pose, cameras, world_ref=True, bounding_box_size=1, b
 
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show(block=block)
+
+
+def draw_hsv(flow, scale):
+    """
+    Draw optical flow data (Middlebury format)
+    :param flow: optical flow data in matrix
+    :return: scale: scale for representing the optical flow
+    adapted from https://github.com/npinto/opencv/blob/master/samples/python2/opt_flow.py
+    """
+    h, w = flow.shape[:2]
+    fx, fy = flow[:, :, 0], flow[:, :, 1]
+    ang = np.arctan2(fy, fx) + np.pi
+    v = np.sqrt(fx * fx + fy * fy)
+    hsv = np.zeros((h, w, 3), np.uint8)
+    hsv[..., 0] = ang * (180 / np.pi / 2)
+    hsv[..., 1] = 255
+    hsv[..., 2] = np.minimum(v * scale, 255)
+    rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+    return rgb
+
+
+def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, error_sparse_norm):
+    """
+    Visualiza el flujo óptico refinado y los errores con respecto al Ground Truth.
+
+    Parámetros:
+        img (np.array): Imagen de referencia (generalmente la primera imagen).
+        points_selected (np.array): Puntos dispersos seleccionados en la imagen.
+        refined_flows (np.array): Flujos refinados (vectores de desplazamiento).
+        error_sparse (np.array): Error en el flujo óptico con respecto al GT.
+        error_sparse_norm (np.array): Norma del error para cada punto.
+    """
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    
+    # Panel 1: Refined Optical Flow
+    axs[0].imshow(img)
+    axs[0].plot(points_selected[:, 0], points_selected[:, 1], '+r', markersize=15)
+    for k in range(points_selected.shape[0]):
+        axs[0].text(
+            points_selected[k, 0] + 5, points_selected[k, 1] + 5,
+            '{:.2f}'.format(np.linalg.norm(refined_flows[k])), color='r'
+        )
+    axs[0].quiver(
+        points_selected[:, 0], points_selected[:, 1],
+        refined_flows[:, 0], refined_flows[:, 1],
+        color='b', angles='xy', scale_units='xy', scale=0.05
+    )
+    axs[0].title.set_text('Refined Optical Flow')
+
+    # Panel 2: Error with respect to GT
+    axs[1].imshow(img)
+    axs[1].plot(points_selected[:, 0], points_selected[:, 1], '+r', markersize=15)
+    for k in range(points_selected.shape[0]):
+        axs[1].text(
+            points_selected[k, 0] + 5, points_selected[k, 1] + 5,
+            '{:.2f}'.format(error_sparse_norm[k]), color='r'
+        )
+    axs[1].quiver(
+        points_selected[:, 0], points_selected[:, 1],
+        error_sparse[:, 0], error_sparse[:, 1],
+        color='b', angles='xy', scale_units='xy', scale=0.05
+    )
+    axs[1].title.set_text('Error with respect to GT')
+
+    plt.show()
+
