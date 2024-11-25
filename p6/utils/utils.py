@@ -279,3 +279,63 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
         
 
     return refined_flows
+
+
+def compute_seed_flow(img1_gray, img2_gray, points_selected, template_size_half, searching_area_size):
+    """
+    Calcula el flujo inicial usando NCC para los puntos seleccionados.
+    """
+    seed_optical_flow_sparse = np.zeros(points_selected.shape)
+    for k in range(points_selected.shape[0]):
+        i_flow, j_flow = seed_estimation_NCC_single_point(
+            img1_gray, img2_gray,
+            points_selected[k, 1], points_selected[k, 0],
+            template_size_half, searching_area_size
+        )
+        seed_optical_flow_sparse[k, :] = np.hstack((j_flow, i_flow))
+
+    return seed_optical_flow_sparse
+
+
+def compute_sparse_flow_errors(seed_optical_flow_sparse, flow_gt):
+    """
+    Calcula el error del flujo óptico inicial basado en NCC.
+    """
+    error_sparse_ncc = seed_optical_flow_sparse - flow_gt
+    error_sparse_norm_ncc = np.sqrt(np.sum(error_sparse_ncc ** 2, axis=1))
+
+    return error_sparse_ncc, error_sparse_norm_ncc
+
+
+def convert_to_dense_flow(points_selected, sparse_flows, image_shape):
+    """
+    Convierte un flujo óptico disperso a una representación densa.
+
+    Parameters:
+        points_selected (np.array): Coordenadas de los puntos seleccionados (n, 2).
+        sparse_flows (np.array): Flujos calculados en puntos seleccionados (n, 2).
+        image_shape (tuple): Forma de la imagen (alto, ancho).
+
+    Returns:
+        np.array: Flujo denso (alto, ancho, 2).
+    """
+    dense_flow = np.zeros((image_shape[0], image_shape[1], 2), dtype=np.float32)
+    for idx, (x, y) in enumerate(points_selected):
+        dense_flow[y, x] = sparse_flows[idx]
+    return dense_flow
+
+
+def compute_dense_flow_error(flow_gt_dense, flow_est_dense):
+    """
+    Calcula el error entre el flujo ground truth y el flujo estimado.
+
+    Parameters:
+        flow_gt_dense (np.array): Flujo ground truth (alto, ancho, 2).
+        flow_est_dense (np.array): Flujo estimado (alto, ancho, 2).
+
+    Returns:
+        np.array: Norma del error por píxel (alto, ancho).
+    """
+    flow_error = flow_est_dense - flow_gt_dense
+    error_norm = np.linalg.norm(flow_error, axis=-1)
+    return error_norm

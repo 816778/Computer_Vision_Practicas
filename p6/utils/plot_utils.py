@@ -331,3 +331,23 @@ def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, err
 
     plt.show()
 
+
+def visualize_dense_flow(img1, img2, flow_gt_dense, flow_refined_dense, flow_error_dense):
+    """
+    Visualiza el flujo óptico denso y el error en la región de interés.
+    """
+    scale = 40  # Escala para visualización del flujo
+    fig, axs = plt.subplots(2, 3)
+    axs[0, 0].imshow(img1, cmap='gray')
+    axs[0, 0].title.set_text('Image 1')
+    axs[1, 0].imshow(img2, cmap='gray')
+    axs[1, 0].title.set_text('Image 2')
+    axs[0, 1].imshow(draw_hsv(flow_gt_dense, scale))  # Flujo ground truth
+    axs[0, 1].title.set_text('Optical Flow GT')
+    axs[1, 1].imshow(draw_hsv(flow_refined_dense, scale))  # Flujo estimado
+    axs[1, 1].title.set_text('LK Estimated Flow')
+    axs[0, 2].imshow(flow_error_dense, cmap='jet')  # Norma del error
+    axs[0, 2].title.set_text('Error Norm')
+    axs[1, 2].axis('off')  # Espacio vacío para la leyenda o información adicional
+    plt.show()
+
