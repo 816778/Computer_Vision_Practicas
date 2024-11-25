@@ -49,17 +49,7 @@ if __name__ == '__main__':
 
     print(seed_optical_flow_sparse)
 
-
-    refined_flows = utils.lucas_kanade_refinement(
-        img1_gray, img2_gray,
-        points_selected,
-        seed_optical_flow_sparse,
-        patch_half_size=template_size_half,
-        epsilon=1e-2,
-        max_iterations=10
-    )
-
-    print("Flujos refinados:\n", refined_flows)
+   
 
 
     # Plot results for sparse optical flow
@@ -69,9 +59,27 @@ if __name__ == '__main__':
 
     flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
 
-    error_sparse = refined_flows - flow_gt
-    error_sparse_norm = np.sqrt(np.sum(error_sparse ** 2, axis=1))
+    error_sparse_ncc = seed_optical_flow_sparse - flow_gt
+    error_sparse_norm_ncc = np.sqrt(np.sum(error_sparse_ncc ** 2, axis=1))
 
-    flow_gt_sparse = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)]
-    plot_utils.visualize_sparse_flow(img1, points_selected, refined_flows, error_sparse, error_sparse_norm)
-  
+    flow_gt_sparse_lk = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)]
+    flow_gt_sparse_ncc = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)]
+
+    plot_utils.visualize_sparse_flow(img1, points_selected, seed_optical_flow_sparse, error_sparse_ncc, error_sparse_norm_ncc, title='NCC')
+
+    refined_flows = utils.lucas_kanade_refinement(
+        img1_gray, img2_gray,
+        points_selected,
+        seed_optical_flow_sparse,
+        patch_half_size=template_size_half,
+        epsilon=1e-3,
+        max_iterations=1000
+    )
+
+    print("Flujos refinados:\n", refined_flows)
+
+    error_sparse_lk = refined_flows - flow_gt
+    error_sparse_norm_lk = np.sqrt(np.sum(error_sparse_lk ** 2, axis=1))
+
+    plot_utils.visualize_sparse_flow(img1, points_selected, refined_flows, error_sparse_lk, error_sparse_norm_lk)
+

@@ -286,7 +286,7 @@ def draw_hsv(flow, scale):
     return rgb
 
 
-def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, error_sparse_norm):
+def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, error_sparse_norm, title='Refined Optical Flow'):
     """
     Visualiza el flujo óptico refinado y los errores con respecto al Ground Truth.
 
@@ -312,7 +312,7 @@ def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, err
         refined_flows[:, 0], refined_flows[:, 1],
         color='b', angles='xy', scale_units='xy', scale=0.05
     )
-    axs[0].title.set_text('Refined Optical Flow')
+    axs[0].title.set_text(title)
 
     # Panel 2: Error with respect to GT
     axs[1].imshow(img)

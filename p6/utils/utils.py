@@ -12,7 +12,7 @@ from scipy.linalg import expm, logm
 import time
 
 import numpy as np
-from scipy.ndimage import gaussian_filter, map_coordinates
+from scipy.ndimage import map_coordinates
 
 def read_image(filename: str, ):
     """
@@ -72,65 +72,51 @@ def generate_wheel(size):
 
 
 
-def normalized_cross_correlation_2(patch: np.array, search_area: np.array) -> np.array:
-    """
-    Estimate normalized cross correlation values for a patch in a searching area.
-    """
-    # Complete the function
-    i0 = patch
-    # ....
-    result = np.zeros(search_area.shape, dtype=np.float)
-    margin_y = int(patch.shape[0]/2)
-    margin_x = int(patch.shape[1]/2)
-
-    for i in range(margin_y, search_area.shape[0] - margin_y):
-        for j in range(margin_x, search_area.shape[1] - margin_x):
-            i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
-            # Implement the correlation
-            # ...
-            # result[i, j] = ...
-    return result
-
-
-
-import numpy as np
-
 def normalized_cross_correlation(patch: np.array, search_area: np.array) -> np.array:
     """
     Estimate normalized cross-correlation (NCC) values for a patch in a search area.
 
     Parameters:
-        patch (np.array): The patch (template) to be matched, size (h, w).
-        search_area (np.array): The area in which the patch is searched, larger than the patch.
+        patch (np.array): Template patch, size (h, w).
+        search_area (np.array): Area to search, larger than the patch.
 
     Returns:
-        np.array: NCC values for the search area, with dimensions adjusted to account for valid NCC computation.
+        np.array: NCC values for the search area, adjusted for valid computation.
     """
-    # Patch size
-    patch_h, patch_w = patch.shape
+    i0 = patch
+    margin_y = int(patch.shape[0]/2)
+    margin_x = int(patch.shape[1]/2)
 
-    # Margins for the patch (half-size of patch dimensions)
-    margin_y = patch_h // 2
-    margin_x = patch_w // 2
+    # Pre-compute mean and normalization factor for the patch
+    i0_mean = np.mean(i0) 
+    i0_diff = i0 - i0_mean
+    i0_norm = np.sqrt(np.sum(i0_diff ** 2))
 
-    ncc_result = np.zeros(search_area.shape, dtype=np.float)
-    patch_mean = np.mean(patch)
-    patch_norm = np.sqrt(np.sum((patch - patch_mean) ** 2))
+    # Resultant NCC matrix (adjusted to exclude invalid edges)
+    result = np.zeros(search_area.shape, dtype=np.float)
 
     # Iterate over all valid positions in the search area
     for i in range(margin_y, search_area.shape[0] - margin_y):
         for j in range(margin_x, search_area.shape[1] - margin_x):
+            
+            i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
 
-            sub_area = search_area[i - margin_y:i + margin_y + 1, j - margin_x:j + margin_x + 1]
-            sub_area_mean = np.mean(sub_area)
-            sub_area_norm = np.sqrt(np.sum((sub_area - sub_area_mean) ** 2))
-            numerator = np.sum((patch - patch_mean) * (sub_area - sub_area_mean))
-            if patch_norm > 0 and sub_area_norm > 0:
-                ncc_result[i, j] = numerator / (patch_norm * sub_area_norm)
+            # Compute mean and normalization factor for the sub-area
+            i1_mean = np.mean(i1)
+            i1_diff = i1 - i1_mean
+            i1_norm = np.sqrt(np.sum(i1_diff ** 2))
+
+            # Compute numerator of the NCC formula
+            numerator = np.sum(i0_diff * i1_diff)
+
+            # Compute NCC value (only if both norms are non-zero)
+            if i0_norm != 0 and i1_norm != 0:
+                result[i, j] = numerator / (i0_norm * i1_norm)
             else:
-                ncc_result[i, j] = 0.0  # Set to 0 if normalization factors are invalid
+                result[i, j] = 0.0  # Set to 0 if normalization factors are invalid
 
-    return ncc_result[margin_y:-margin_y, margin_x:-margin_x]
+    # Return valid part of the result (excluding margins)
+    return result
 
 
 
@@ -152,10 +138,69 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
     i_flow = i_ini_sa + iMax[0] - i_img
     j_flow = j_ini_sa + jMax[0] - j_img
 
-    return i_flow, j_flow
+    return i_flow, j_flow # filas, columnas
+
+def numerical_gradient(img_int: np.array, point: np.array)->np.array:
+    """
+    https://es.wikipedia.org/wiki/Interpolaci%C3%B3n_bilineal
+    :param img:image to interpolate
+    :param point: [[y0,x0],[y1,x1], ... [yn,xn]]
+    :return: Ix_y = [[Ix_0,Iy_0],[Ix_1,Iy_1], ... [Ix_n,Iy_n]]
+    """
+
+    a = np.zeros((point.shape[0], 2), dtype= np.float)
+    filter = np.array([-1, 0, 1], dtype=np.float)
+    point_int = point.astype(np.int)
+    img = img_int.astype(np.float)
+
+    for i in range(0,point.shape[0]):
+        py = img[point_int[i,0]-1:point_int[i,0]+2,point_int[i,1]].astype(np.float)
+        px = img[point_int[i,0],point_int[i,1]-1:point_int[i,1]+2].astype(np.float)
+        a[i, 0] = 1/2*np.dot(filter,px)
+        a[i, 1] = 1/2*np.dot(filter,py)
+
+    return a
+
+def int_bilineal(img: np.array, point: np.array)->np.array:
+    """
+    https://es.wikipedia.org/wiki/Interpolaci%C3%B3n_bilineal
+    Vq = scipy.ndimage.map_coordinates(img.astype(np.float), [point[:, 0].ravel(), point[:, 1].ravel()], order=1, mode='nearest').reshape((point.shape[0],))
+
+    :param img:image to interpolate
+    :param point: point subpixel
+    point = [[y0,x0],[y1,x1], ... [yn,xn]]
+    :return: [gray0,gray1, .... grayn]
+    """
+    h, w = img.shape
+    
+    A = np.zeros((point.shape[0], 2, 2), dtype= np.float)
+    point_lu = point.astype(np.int)
+    point_ru = np.copy(point_lu)
+    point_ru[:,1] = point_ru[:,1] + 1
+    point_ld = np.copy(point_lu)
+    point_ld[:, 0] = point_ld[:, 0] + 1
+    point_rd = np.copy(point_lu)
+    point_rd[:, 0] = point_rd[:, 0] + 1
+    point_rd[:, 1] = point_rd[:, 1] + 1
+
+    A[:, 0, 0] = img[point_lu[:,0],point_lu[:,1]]
+    A[:, 0, 1] = img[point_ru[:,0],point_ru[:,1]]
+    A[:, 1, 0] = img[point_ld[:,0],point_ld[:,1]]
+    A[:, 1, 1] = img[point_rd[:,0],point_rd[:,1]]
+    l_u = np.zeros((point.shape[0],1,2),dtype= np.float)
+    l_u[:, 0, 0] = -((point[:,0]-point_lu[:,0])-1)
+    l_u[:, 0, 1] = point[:,0]-point_lu[:,0]
+
+    r_u = np.zeros((point.shape[0],2,1),dtype= np.float)
+    r_u[:, 0, 0] = -((point[:,1]-point_lu[:,1])-1)
+    r_u[:, 1, 0] = point[:, 1]-point_lu[:,1]
+    grays = l_u @ A @ r_u
+
+    return grays.reshape((point.shape[0],))
 
 
-def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5, epsilon=1e-2, max_iterations=10):
+
+def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5, epsilon=1e-2, max_iterations=100):
     """
     Refinar el flujo óptico inicial utilizando el método Lucas-Kanade.
 
@@ -172,13 +217,13 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
         refined_flows (np.array): Flujos refinados (dx, dy) después del refinamiento.
     """
     # Gradientes de la primera imagen
-    Ix = gaussian_filter(img1, sigma=1, order=[0, 1])  # Gradiente en x
-    Iy = gaussian_filter(img1, sigma=1, order=[1, 0])  # Gradiente en y
+    Ix, Iy = np.gradient(img1)
 
     refined_flows = np.zeros_like(initial_flows)
 
     for idx, (x, y) in enumerate(points):
-        u, v = initial_flows[idx]
+        u = initial_flows[idx]
+        print(u)
 
         # Extraer parche centrado en el punto en img1
         x_start, x_end = int(x - patch_half_size), int(x + patch_half_size + 1)
@@ -186,40 +231,51 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
 
         Ix_patch = Ix[y_start:y_end, x_start:x_end].flatten()
         Iy_patch = Iy[y_start:y_end, x_start:x_end].flatten()
-        I1_patch = img1[y_start:y_end, x_start:x_end].flatten()
+        I0_patch = img1[y_start:y_end, x_start:x_end].flatten()
 
         # Matriz A
+        Ix2 = np.sum(Ix_patch ** 2)
+        Iy2 = np.sum(Iy_patch ** 2)
+        IxIy = np.sum(Ix_patch * Iy_patch)
+        
         A = np.array([
-            [np.sum(Ix_patch * Ix_patch), np.sum(Ix_patch * Iy_patch)],
-            [np.sum(Ix_patch * Iy_patch), np.sum(Iy_patch * Iy_patch)]
+            [Ix2, IxIy],
+            [IxIy, Iy2]
         ])
+        print(A)
 
         if np.linalg.det(A) < 1e-5:
-            refined_flows[idx] = [u, v]
+            refined_flows[idx] = u
             continue  # Pasar al siguiente punto si A no es invertible
 
-        for _ in range(max_iterations):
+
+        for i in range(max_iterations):
+            
+            # Generar coordenadas desplazadas para el parche
             x_coords, y_coords = np.meshgrid(
-                np.arange(x_start, x_end) + u,
-                np.arange(y_start, y_end) + v
+                np.arange(x_start, x_end) + u[0],
+                np.arange(y_start, y_end) + u[1]
             )
-            I2_patch = map_coordinates(img2, [y_coords.ravel(), x_coords.ravel()], order=1)
 
-            e = I2_patch - I1_patch
+            points_to_interpolate = np.vstack((y_coords.ravel(), x_coords.ravel())).T
+            
+            I1_patch = int_bilineal(img2, points_to_interpolate)
+            It = I1_patch - I0_patch
 
-            b = np.array([
-                np.sum(Ix_patch * e),
-                np.sum(Iy_patch * e)
-            ])
+            b = -np.array([
+                np.sum(Iy_patch * It),
+                np.sum(Ix_patch * It)
+            ]).T
 
-            delta_u = np.linalg.solve(A, b)
-
-            u += delta_u[0]
-            v += delta_u[1]
+            inv_A = np.linalg.inv(A)
+            delta_u = inv_A @ b
+            u += delta_u
 
             if np.linalg.norm(delta_u) < epsilon:
                 break
 
-        refined_flows[idx] = [u, v]
+        refined_flows[idx] = u
+
+        
 
     return refined_flows
