@@ -281,6 +281,81 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
     return refined_flows
 
 
+def lucas_kanade_subregion(img1, img2, points, initial_flows, region, patch_half_size=5, epsilon=1e-2, max_iterations=100, det_threshold=1e-5):
+    x_min, y_min, x_max, y_max = region
+    img1_sub = img1[y_min:y_max, x_min:x_max]
+    img2_sub = img2[y_min:y_max, x_min:x_max]
+
+    print("img1_sub shape:", img1_sub.shape)
+    print("img1 shape:", img1.shape)
+
+    # Gradientes de la primera imagen
+    Ix, Iy = np.gradient(img1)
+    refined_flows = np.zeros_like(initial_flows)
+    for idx, (x, y) in enumerate(points):
+        u = initial_flows[idx]
+
+        # Ignorar puntos fuera de la sub-selección
+        if not (x_min + patch_half_size <= x <= x_max - patch_half_size and y_min + patch_half_size <= y <= y_max - patch_half_size):
+            refined_flows[idx] = u
+            continue
+
+        # Convertir a coordenadas relativas a la sub-selección
+        x_rel, y_rel = x - x_min, y - y_min
+
+        # Extraer parche centrado en el punto
+        x_start, x_end = int(x_rel - patch_half_size), int(x_rel + patch_half_size + 1)
+        y_start, y_end = int(y_rel - patch_half_size), int(y_rel + patch_half_size + 1)
+
+        Ix_patch = Ix[y_start:y_end, x_start:x_end].flatten()
+        Iy_patch = Iy[y_start:y_end, x_start:x_end].flatten()
+        I0_patch = img1_sub[y_start:y_end, x_start:x_end].flatten()
+
+        # Matriz A
+        Ix2 = np.sum(Ix_patch ** 2)
+        Iy2 = np.sum(Iy_patch ** 2)
+        IxIy = np.sum(Ix_patch * Iy_patch)
+
+        A = np.array([
+            [Ix2, IxIy],
+            [IxIy, Iy2]
+        ])
+
+        # Verificar si A está mal condicionada
+        if np.linalg.det(A) < det_threshold:
+            refined_flows[idx] = u  # Conservar el flujo inicial
+            continue
+
+        # Refinamiento iterativo
+        for i in range(max_iterations):
+            x_coords, y_coords = np.meshgrid(
+                np.arange(x_start, x_end) + u[0],
+                np.arange(y_start, y_end) + u[1]
+            )
+
+            points_to_interpolate = np.vstack((y_coords.ravel(), x_coords.ravel())).T
+            I1_patch = int_bilineal(img2_sub, points_to_interpolate)
+
+            It = I1_patch - I0_patch
+
+            b = -np.array([
+                np.sum(Ix_patch * It),
+                np.sum(Iy_patch * It)
+            ])
+
+            delta_u = np.linalg.inv(A) @ b
+            u += delta_u
+
+            if np.linalg.norm(delta_u) < epsilon:
+                break
+
+        refined_flows[idx] = u
+
+    return refined_flows
+
+
+
+
 def compute_seed_flow(img1_gray, img2_gray, points_selected, template_size_half, searching_area_size):
     """
     Calcula el flujo inicial usando NCC para los puntos seleccionados.

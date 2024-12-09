@@ -86,14 +86,31 @@ if __name__ == '__main__':
     ##########################################################################################
     # OPTIONAL
     ##########################################################################################
+    region = (x_min, y_min, x_max, y_max) = (50, 140, 190, 210)
+    refined_flows = utils.lucas_kanade_subregion(
+        img1=img1_gray,
+        img2=img2_gray,
+        points=points_selected,
+        initial_flows=seed_optical_flow_sparse,
+        region=region,
+        patch_half_size=5,
+        epsilon=1e-2,
+        max_iterations=100,
+        det_threshold=1e-5
+    )
+
+    img1_sub = img1[region[1]:region[3], region[0]:region[2]]
+    img2_sub = img2[region[1]:region[3], region[0]:region[2]]
+
     flow_gt_dense = utils.convert_to_dense_flow(points_selected, flow_gt, img1_gray.shape)
+    flow_gt_dense_sub = flow_gt_dense[region[1]:region[3], region[0]:region[2]]
+
     flow_refined_dense = utils.convert_to_dense_flow(points_selected, refined_flows, img1_gray.shape)
+    flow_refined_dense_sub = flow_refined_dense[region[1]:region[3], region[0]:region[2]]
+
+    flow_error_dense_sub = np.linalg.norm(flow_gt_dense_sub - flow_refined_dense_sub, axis=2)
 
     # Calcular el error denso
     flow_error_dense = utils.compute_dense_flow_error(flow_gt_dense, flow_refined_dense)
 
-    print("flow_gt_dense shape:", flow_gt_dense.shape)
-    print("flow_refined_dense shape:", flow_refined_dense.shape)
-    print("flow_error_dense shape:", flow_error_dense.shape)
-
-    plot_utils.visualize_dense_flow(img1_gray, img2_gray, flow_gt_dense, flow_refined_dense, flow_error_dense)
+    plot_utils.visualize_dense_flow(img1_sub, img2_sub, flow_gt_dense_sub, flow_refined_dense_sub, flow_error_dense_sub)
