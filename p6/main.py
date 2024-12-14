@@ -72,6 +72,7 @@ if __name__ == '__main__':
         epsilon=1e-3,
         max_iterations=1000
     )
+    print("flow_gt:\n", flow_gt)
     print("Flujos refinados:\n", refined_flows)
 
     error_sparse_lk, error_sparse_norm_lk = utils.compute_sparse_flow_errors(refined_flows, flow_gt)
@@ -105,6 +106,7 @@ if __name__ == '__main__':
         template_size_half,
         searching_area_size
     )
+    print("Flujo inicial (NCC):\n", seed_optical_flow_sparse)
     # seed_optical_flow_sparse = -1 * np.ones((8, 2))
 
     refined_flows = utils.lucas_kanade_refinement_region(
@@ -119,7 +121,7 @@ if __name__ == '__main__':
         det_threshold=1e-5
     )
     flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
-    print("flow_gt:", flow_gt)
+    print("flow_gt:\n", flow_gt)
     print("Flujos refinados:\n", refined_flows)
 
     # error_sparse_lk, error_sparse_norm_lk = utils.compute_sparse_flow_errors(refined_flows, flow_gt)
@@ -130,6 +132,20 @@ if __name__ == '__main__':
     flow_est_sub = flow_est[region[1]:region[3], region[0]:region[2]]
     binUnknownFlow_sub = binUnknownFlow[region[1]:region[3], region[0]:region[2]]
 
+    if DO_PLOT:
+        plot_utils.visualize_dense_flow(img1_sub, img2_sub, flow_12_sub, flow_est_sub, binUnknownFlow_sub)
 
 
-    plot_utils.visualize_dense_flow(img1_sub, img2_sub, flow_12_sub, flow_est_sub, binUnknownFlow_sub)
+    ##########################################################################################
+    # OPTIONAL 2
+    ##########################################################################################
+    tvl1 = cv.optflow.createOptFlow_DualTVL1()
+    flow_tvl1 = tvl1.calc(img1_gray, img2_gray, None)
+    binUnknownFlow = flow_12 > unknownFlowThresh
+    plot_utils.visualize_dense_flow(img1, img2, flow_12, flow_tvl1, binUnknownFlow)
+    print("Flujo de referencia (GT):", flow_gt)
+    print("Flujo estimado (TV-L1):", flow_tvl1)
+
+    flow_farneback = cv.calcOpticalFlowFarneback(img1_gray, img2_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+    plot_utils.visualize_dense_flow(img1, img2, flow_12, flow_farneback, binUnknownFlow)
+    
