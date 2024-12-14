@@ -86,8 +86,28 @@ if __name__ == '__main__':
     ##########################################################################################
     # OPTIONAL
     ##########################################################################################
-    region = (x_min, y_min, x_max, y_max) = (50, 140, 190, 210)
-    refined_flows = utils.lucas_kanade_subregion(
+    print("\n\n##################################################################")
+    print("# OPTIONAL")
+    print("##################################################################\n")
+    region = (x_min, y_min, x_max, y_max) = (50, 140, 200, 210)
+    # plot_utils.visualite_points_region(img1, region, points_selected)
+    img1_sub = img1[region[1]:region[3], region[0]:region[2]]
+    img2_sub = img2[region[1]:region[3], region[0]:region[2]]
+
+    points_selected, global_points = utils.select_new_points(img1_gray, region)
+    if DO_PLOT:
+        plot_utils.visualite_points_region(img1, region, global_points)
+        plot_utils.visualite_points_region(img1_sub, region, points_selected, is_global=False)
+
+    seed_optical_flow_sparse = utils.compute_seed_flow(
+        img1_gray, img2_gray,
+        points_selected,
+        template_size_half,
+        searching_area_size
+    )
+    # seed_optical_flow_sparse = -1 * np.ones((8, 2))
+
+    refined_flows = utils.lucas_kanade_refinement_region(
         img1=img1_gray,
         img2=img2_gray,
         points=points_selected,
@@ -98,19 +118,18 @@ if __name__ == '__main__':
         max_iterations=100,
         det_threshold=1e-5
     )
+    flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
+    print("flow_gt:", flow_gt)
+    print("Flujos refinados:\n", refined_flows)
 
-    img1_sub = img1[region[1]:region[3], region[0]:region[2]]
-    img2_sub = img2[region[1]:region[3], region[0]:region[2]]
+    # error_sparse_lk, error_sparse_norm_lk = utils.compute_sparse_flow_errors(refined_flows, flow_gt)
+    binUnknownFlow = flow_12 > unknownFlowThresh
+    flow_est = utils.convert_to_dense_flow(points_selected, refined_flows, img1_gray.shape)
 
-    flow_gt_dense = utils.convert_to_dense_flow(points_selected, flow_gt, img1_gray.shape)
-    flow_gt_dense_sub = flow_gt_dense[region[1]:region[3], region[0]:region[2]]
+    flow_12_sub = flow_12[region[1]:region[3], region[0]:region[2]]
+    flow_est_sub = flow_est[region[1]:region[3], region[0]:region[2]]
+    binUnknownFlow_sub = binUnknownFlow[region[1]:region[3], region[0]:region[2]]
 
-    flow_refined_dense = utils.convert_to_dense_flow(points_selected, refined_flows, img1_gray.shape)
-    flow_refined_dense_sub = flow_refined_dense[region[1]:region[3], region[0]:region[2]]
 
-    flow_error_dense_sub = np.linalg.norm(flow_gt_dense_sub - flow_refined_dense_sub, axis=2)
 
-    # Calcular el error denso
-    flow_error_dense = utils.compute_dense_flow_error(flow_gt_dense, flow_refined_dense)
-
-    plot_utils.visualize_dense_flow(img1_sub, img2_sub, flow_gt_dense_sub, flow_refined_dense_sub, flow_error_dense_sub)
+    plot_utils.visualize_dense_flow(img1_sub, img2_sub, flow_12_sub, flow_est_sub, binUnknownFlow_sub)

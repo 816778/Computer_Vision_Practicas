@@ -17,7 +17,7 @@
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
-
+import utils.plot_utils as plot_utils
 
 IMAGES_FOLDER = "images/"
 DATA_FOLDER = "data/"
@@ -121,6 +121,8 @@ if __name__ == '__main__':
     flow_est_sparse_norm = np.sqrt(np.sum(flow_est_sparse ** 2, axis=1))
     error_sparse = flow_est_sparse - flow_gt
     error_sparse_norm = np.sqrt(np.sum(error_sparse ** 2, axis=1))
+    print("Flow shape: ", flow_est.shape) # (388, 584, 2)
+    print("flow_gt shape: ", flow_gt.shape) # (6, 2)
 
 
     # Plot results for sparse optical flow
@@ -142,29 +144,5 @@ if __name__ == '__main__':
     axs[1].title.set_text('Error with respect to GT')
     plt.show()
 
-
-    ## Dense optical flow
-    flow_error = flow_est - flow_12
-    flow_error[binUnknownFlow] = 0
-    error_norm = np.sqrt(np.sum(flow_error ** 2, axis=-1))
-
-
-    # Plot results for dense optical flow
-    scale = 40
-    wheelFlow = generate_wheel(256)
-    fig, axs = plt.subplots(2, 3)
-    axs[0, 0].imshow(img1)
-    axs[0, 0].title.set_text('image 1')
-    axs[1, 0].imshow(img2)
-    axs[1, 0].title.set_text('image 2')
-    axs[0, 1].imshow(draw_hsv(flow_12 * np.bitwise_not(binUnknownFlow), scale))
-    axs[0, 1].title.set_text('Optical flow ground truth')
-    axs[1, 1].imshow(draw_hsv(flow_est, scale))
-    axs[1, 1].title.set_text('LK estimated optical flow ')
-    axs[0, 2].imshow(error_norm, cmap='jet')
-    axs[0, 2].title.set_text('Optical flow error norm')
-    axs[1, 2].imshow(draw_hsv(wheelFlow, 3))
-    axs[1, 2].title.set_text('Color legend')
-    axs[1, 2].set_axis_off()
-    fig.subplots_adjust(hspace=0.5)
-    plt.show()
+    plot_utils.visualize_dense_flow(img1, img2, flow_12, flow_est, binUnknownFlow)
+    exit()

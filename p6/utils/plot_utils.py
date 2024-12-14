@@ -332,22 +332,60 @@ def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, err
     plt.show()
 
 
-def visualize_dense_flow(img1, img2, flow_gt_dense, flow_refined_dense, flow_error_dense):
+def generate_wheel(size):
+    """
+     Generate wheel optical flow for visualizing colors
+     :param size: size of the image
+     :return: flow: optical flow for visualizing colors
+     """
+    rMax = size / 2
+    x, y = np.meshgrid(np.arange(size), np.arange(size))
+    u = x - size / 2
+    v = y - size / 2
+    r = np.sqrt(u ** 2 + v ** 2)
+    u[r > rMax] = 0
+    v[r > rMax] = 0
+    flow = np.dstack((u, v))
+
+    return flow
+
+def visualize_dense_flow(img1, img2, flow_12, flow_est, binUnknownFlow):
     """
     Visualiza el flujo óptico denso y el error en la región de interés.
     """
+
+    flow_error = flow_est - flow_12
+    flow_error[binUnknownFlow] = 0
+    error_norm = np.sqrt(np.sum(flow_error ** 2, axis=-1))
+
     scale = 40  # Escala para visualización del flujo
+    wheelFlow = generate_wheel(256)
     fig, axs = plt.subplots(2, 3)
-    axs[0, 0].imshow(img1, cmap='gray')
+    axs[0, 0].imshow(img1)
     axs[0, 0].title.set_text('Image 1')
-    axs[1, 0].imshow(img2, cmap='gray')
+    axs[1, 0].imshow(img2)
     axs[1, 0].title.set_text('Image 2')
-    axs[0, 1].imshow(draw_hsv(flow_gt_dense, scale))  # Flujo ground truth
+    axs[0, 1].imshow(draw_hsv(flow_12 * np.bitwise_not(binUnknownFlow), scale))
     axs[0, 1].title.set_text('Optical Flow GT')
-    axs[1, 1].imshow(draw_hsv(flow_refined_dense, scale))  # Flujo estimado
+    axs[1, 1].imshow(draw_hsv(flow_est, scale))  # Flujo estimado
     axs[1, 1].title.set_text('LK Estimated Flow')
-    axs[0, 2].imshow(flow_error_dense, cmap='jet')  # Norma del error
+    axs[0, 2].imshow(error_norm, cmap='jet')  # Norma del error
     axs[0, 2].title.set_text('Error Norm')
-    axs[1, 2].axis('off')  # Espacio vacío para la leyenda o información adicional
+    axs[1, 2].imshow(draw_hsv(wheelFlow, 3))
+    axs[1, 2].title.set_text('Color legend')
+    axs[1, 2].set_axis_off()
+    fig.subplots_adjust(hspace=0.5)
     plt.show()
 
+
+
+def visualite_points_region(img, region, points, is_global=True):
+    x_min, y_min, x_max, y_max = region
+    plt.imshow(img, cmap='gray')
+    plt.scatter(points[:, 0], points[:, 1], color='red', label='Selected Points')
+    if is_global:
+        plt.gca().add_patch(plt.Rectangle((x_min, y_min), x_max - x_min, y_max - y_min, edgecolor='blue', fill=False, label='Region'))
+    else: 
+        plt.gca().add_patch(plt.Rectangle((0, 0), x_max - x_min, y_max - y_min, edgecolor='blue', fill=False, label='Region'))
+    plt.legend()
+    plt.show()
