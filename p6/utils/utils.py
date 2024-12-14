@@ -422,27 +422,41 @@ def compute_dense_flow_error(flow_gt, flow_est, unknownFlowThresh=1e9):
 
 
 
-def select_new_points(img1, region, num_points=10, border_margin=7):
+def select_new_points(img1, region, num_points=10, border_margin=20, use_random_points=True):
     x_min, y_min, x_max, y_max = region
     roi = img1[y_min:y_max, x_min:x_max]
-    corners = cv.goodFeaturesToTrack(roi, maxCorners=num_points, qualityLevel=0.01, minDistance=10)
-    if corners is not None:
-        corners = np.int0(corners)
 
-        # Ajustar las coordenadas relativas a la región al marco global
+    if use_random_points:
+        corners = cv.goodFeaturesToTrack(roi, maxCorners=num_points, qualityLevel=0.01, minDistance=10)
+        if corners is not None:
+            corners = np.int0(corners)
+
+            # Ajustar las coordenadas relativas a la región al marco global
+            points = []
+            global_points = []
+            for corner in corners:
+                x, y = corner.ravel()
+                x_global, y_global = x + x_min, y + y_min 
+                
+                # Filtrar puntos cerca de los bordes de la región
+                if (x > border_margin and x < (roi.shape[1] - border_margin) and
+                    y > border_margin and y < (roi.shape[0] - border_margin)):
+                    global_points.append([x_global, y_global])
+                    points.append([x, y])
+
+            points = np.array(points[:num_points])
+            global_points = np.array(global_points[:num_points])
+    else:
+        height, width = roi.shape
         points = []
         global_points = []
-        for corner in corners:
-            x, y = corner.ravel()
-            x_global, y_global = x + x_min, y + y_min 
-            
-            # Filtrar puntos cerca de los bordes de la región
-            if (x > border_margin and x < (roi.shape[1] - border_margin) and
-                y > border_margin and y < (roi.shape[0] - border_margin)):
-                global_points.append([x_global, y_global])
-                points.append([x, y])
 
-        points = np.array(points[:num_points])
-        global_points = np.array(global_points[:num_points])
+        for y in range(border_margin, height - border_margin):
+            for x in range(border_margin, width - border_margin):
+                points.append([x, y])
+                global_points.append([x + x_min, y + y_min])
+
+        points = np.array(points)
+        global_points = np.array(global_points)
 
     return points, global_points

@@ -95,7 +95,7 @@ if __name__ == '__main__':
     img1_sub = img1[region[1]:region[3], region[0]:region[2]]
     img2_sub = img2[region[1]:region[3], region[0]:region[2]]
 
-    points_selected, global_points = utils.select_new_points(img1_gray, region)
+    points_selected, global_points = utils.select_new_points(img1_gray, region, use_random_points=True)
     if DO_PLOT:
         plot_utils.visualite_points_region(img1, region, global_points)
         plot_utils.visualite_points_region(img1_sub, region, points_selected, is_global=False)
@@ -117,7 +117,7 @@ if __name__ == '__main__':
         region=region,
         patch_half_size=5,
         epsilon=1e-2,
-        max_iterations=100,
+        max_iterations=10,
         det_threshold=1e-5
     )
     flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
