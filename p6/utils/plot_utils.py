@@ -297,20 +297,13 @@ def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, err
         error_sparse (np.array): Error en el flujo óptico con respecto al GT.
         error_sparse_norm (np.array): Norma del error para cada punto.
     """
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    fig, axs = plt.subplots(1, 2)
     
-    # Panel 1: Refined Optical Flow
     axs[0].imshow(img)
     axs[0].plot(points_selected[:, 0], points_selected[:, 1], '+r', markersize=15)
     for k in range(points_selected.shape[0]):
-        axs[0].text(
-            points_selected[k, 0] + 5, points_selected[k, 1] + 5,
-            '{:.2f}'.format(np.linalg.norm(refined_flows[k])), color='r'
-        )
-    axs[0].quiver(
-        points_selected[:, 0], points_selected[:, 1],
-        refined_flows[:, 0], refined_flows[:, 1],
-        color='b', angles='xy', scale_units='xy', scale=0.05
+        axs[0].text(points_selected[k, 0] + 5, points_selected[k, 1] + 5,'{:.2f}'.format(np.linalg.norm(refined_flows[k])), color='r')
+    axs[0].quiver(points_selected[:, 0], points_selected[:, 1],refined_flows[:, 0], refined_flows[:, 1],color='b', angles='xy', scale_units='xy', scale=0.05
     )
     axs[0].title.set_text(title)
 
@@ -329,6 +322,36 @@ def visualize_sparse_flow(img, points_selected, refined_flows, error_sparse, err
     )
     axs[1].title.set_text('Error with respect to GT')
 
+    plt.show()
+
+
+def visualize_sparse_flow_2(img, points_selected, flow_est_sparse, error_sparse, error_sparse_norm, flow_est_sparse_norm, title='Refined Optical Flow'):
+    """
+    Visualiza el flujo óptico refinado y los errores con respecto al Ground Truth.
+
+    Parámetros:
+        img (np.array): Imagen de referencia (generalmente la primera imagen).
+        points_selected (np.array): Puntos dispersos seleccionados en la imagen.
+        refined_flows (np.array): Flujos refinados (vectores de desplazamiento).
+        error_sparse (np.array): Error en el flujo óptico con respecto al GT.
+        error_sparse_norm (np.array): Norma del error para cada punto.
+    """
+    fig, axs = plt.subplots(1, 2)
+    axs[0].imshow(img)
+    axs[0].plot(points_selected[:, 0], points_selected[:, 1], '+r', markersize=15)
+    for k in range(points_selected.shape[0]):
+        axs[0].text(points_selected[k, 0] + 5, points_selected[k, 1] + 5, '{:.2f}'.format(flow_est_sparse_norm[k]), color='r')
+    axs[0].quiver(points_selected[:, 0], points_selected[:, 1], flow_est_sparse[:, 0], flow_est_sparse[:, 1], color='b', angles='xy', scale_units='xy', scale=0.05)
+    axs[0].title.set_text('Optical flow')
+    axs[1].imshow(img)
+    axs[1].plot(points_selected[:, 0], points_selected[:, 1], '+r', markersize=15)
+    for k in range(points_selected.shape[0]):
+        axs[1].text(points_selected[k, 0] + 5, points_selected[k, 1] + 5, '{:.2f}'.format(error_sparse_norm[k]),
+                    color='r')
+    axs[1].quiver(points_selected[:, 0], points_selected[:, 1], error_sparse[:, 0], error_sparse[:, 1], color='b',
+               angles='xy', scale_units='xy', scale=0.05)
+
+    axs[1].title.set_text(title)
     plt.show()
 
 

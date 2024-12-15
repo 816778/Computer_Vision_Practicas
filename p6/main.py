@@ -45,7 +45,7 @@ def load_images_and_points():
 if __name__ == '__main__':
     np.set_printoptions(precision=4, linewidth=1024, suppress=True)
 
-    DO_PLOT = False
+    DO_PLOT = True
 
     img1, img2, img1_gray, img2_gray, points_selected, flow_12 = load_images_and_points()
     flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
@@ -69,21 +69,21 @@ if __name__ == '__main__':
         points_selected,
         seed_optical_flow_sparse,
         patch_half_size=template_size_half,
-        epsilon=1e-3,
+        epsilon=1e-6,
         max_iterations=1000
     )
     print("flow_gt:\n", flow_gt)
     print("Flujos refinados:\n", refined_flows)
 
     error_sparse_lk, error_sparse_norm_lk = utils.compute_sparse_flow_errors(refined_flows, flow_gt)
-
+    print("error_sparse_norm_lk:", error_sparse_norm_lk)
     if DO_PLOT:
-        plot_utils.visualize_sparse_flow(img1, points_selected, seed_optical_flow_sparse, 
-                                        error_sparse_ncc, error_sparse_norm_ncc, title="NCC")
+        # plot_utils.visualize_sparse_flow_2(img1, points_selected,seed_optical_flow_sparse, error_sparse_ncc, error_sparse_norm_ncc, flow_est_sparse_norm_ncc, title="NCC")
+        # plot_utils.visualize_sparse_flow_2(img1, points_selected,refined_flows, error_sparse_lk, error_sparse_norm_lk, flow_est_sparse_norm, title="Lucas-Kanade")
+        # plot_utils.visualize_sparse_flow(img1, points_selected, seed_optical_flow_sparse, error_sparse_ncc, error_sparse_norm_ncc, title="NCC")
+        plot_utils.visualize_sparse_flow(img1, points_selected,refined_flows, error_sparse_lk, error_sparse_norm_lk, title="Lucas-Kanade")
 
-        plot_utils.visualize_sparse_flow(img1, points_selected,refined_flows,
-            error_sparse_lk, error_sparse_norm_lk, title="Lucas-Kanade")
-
+    exit()
     ##########################################################################################
     # OPTIONAL
     ##########################################################################################

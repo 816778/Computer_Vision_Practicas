@@ -118,6 +118,7 @@ if __name__ == '__main__':
     ## Sparse optical flow
     flow_gt = flow_12[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)].astype(float)
     flow_est_sparse = flow_est[points_selected[:, 1].astype(int), points_selected[:, 0].astype(int)]
+    print("flow_est_sparse shape: ", flow_est_sparse.shape)
     flow_est_sparse_norm = np.sqrt(np.sum(flow_est_sparse ** 2, axis=1))
     error_sparse = flow_est_sparse - flow_gt
     error_sparse_norm = np.sqrt(np.sum(error_sparse ** 2, axis=1))

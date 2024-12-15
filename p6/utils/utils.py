@@ -222,12 +222,12 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
     refined_flows = np.zeros_like(initial_flows)
 
     for idx, (x, y) in enumerate(points):
-        u = initial_flows[idx]
+        u = initial_flows[idx].copy()
 
         # Extraer parche centrado en el punto en img1
         x_start, x_end = int(x - patch_half_size), int(x + patch_half_size + 1)
         y_start, y_end = int(y - patch_half_size), int(y + patch_half_size + 1)
-
+        
         Ix_patch = Ix[y_start:y_end, x_start:x_end].flatten()
         Iy_patch = Iy[y_start:y_end, x_start:x_end].flatten()
         I0_patch = img1[y_start:y_end, x_start:x_end].flatten()
@@ -267,14 +267,20 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
 
             inv_A = np.linalg.inv(A)
             delta_u = inv_A @ b
+            # delta_u = np.linalg.solve(A, b)
             u += delta_u
+
+            if i == max_iterations - 1:
+                print(f"No converge en punto ({x}, {y}), usando flujo inicial.")
+                u = initial_flows[idx]
+                break
+
+            # print(f"u: {u}, delta_u: {delta_u}, norm: {np.linalg.norm(delta_u)}")
 
             if np.linalg.norm(delta_u) < epsilon:
                 break
 
-        refined_flows[idx] = u
-
-        
+        refined_flows[idx] = u  
 
     return refined_flows
 
