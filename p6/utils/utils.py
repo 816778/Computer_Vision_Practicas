@@ -244,7 +244,7 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
 
         if np.linalg.det(A) < det_threshold:
             refined_flows[idx] = u
-            continue  # Pasar al siguiente punto si A no es invertible
+            continue  # Pasa al siguiente punto si A no es invertible
 
 
         for i in range(max_iterations):
@@ -267,15 +267,12 @@ def lucas_kanade_refinement(img1, img2, points, initial_flows, patch_half_size=5
 
             inv_A = np.linalg.inv(A)
             delta_u = inv_A @ b
-            # delta_u = np.linalg.solve(A, b)
             u += delta_u
 
             if i == max_iterations - 1:
                 print(f"No converge en punto ({x}, {y}), usando flujo inicial.")
                 u = initial_flows[idx]
                 break
-
-            # print(f"u: {u}, delta_u: {delta_u}, norm: {np.linalg.norm(delta_u)}")
 
             if np.linalg.norm(delta_u) < epsilon:
                 break

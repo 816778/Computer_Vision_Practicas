@@ -77,15 +77,17 @@ if __name__ == '__main__':
 
     error_sparse_lk, error_sparse_norm_lk = utils.compute_sparse_flow_errors(refined_flows, flow_gt)
     print("error_sparse_norm_lk:", error_sparse_norm_lk)
+
     if DO_PLOT:
-        # plot_utils.visualize_sparse_flow_2(img1, points_selected,seed_optical_flow_sparse, error_sparse_ncc, error_sparse_norm_ncc, flow_est_sparse_norm_ncc, title="NCC")
-        # plot_utils.visualize_sparse_flow_2(img1, points_selected,refined_flows, error_sparse_lk, error_sparse_norm_lk, flow_est_sparse_norm, title="Lucas-Kanade")
-        # plot_utils.visualize_sparse_flow(img1, points_selected, seed_optical_flow_sparse, error_sparse_ncc, error_sparse_norm_ncc, title="NCC")
         plot_utils.visualize_sparse_flow(img1, points_selected,refined_flows, error_sparse_lk, error_sparse_norm_lk, title="Lucas-Kanade")
+        binUnknownFlow = flow_12 > unknownFlowThresh
+        flow_est = utils.convert_to_dense_flow(points_selected, refined_flows, img1_gray.shape)
+        plot_utils.visualize_dense_flow(img1, img2, flow_12, flow_est, binUnknownFlow)
 
     exit()
+
     ##########################################################################################
-    # OPTIONAL
+    # OPTIONAL (No realizado)
     ##########################################################################################
     print("\n\n##################################################################")
     print("# OPTIONAL")
