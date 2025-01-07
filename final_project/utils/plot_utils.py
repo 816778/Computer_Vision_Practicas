@@ -94,8 +94,22 @@ def draw3DLine(ax, xIni, xEnd, strStyle, lColor, lWidth):
             strStyle, color=lColor, linewidth=lWidth)
 
 
-def visualize_projection(image, xData, xProj, title):
+
+def visualize_projection_whitoutGT(image, xProj, title, resize_dim=None):
     plt.figure()
+    if resize_dim:
+        image = cv2.resize(image, resize_dim)
+    plt.imshow(image, cmap='gray', vmin=0, vmax=255)
+    plt.plot(xProj[0, :], xProj[1, :], 'bo')
+    plt.title(title)
+    print('Close the figures to continue.')
+    plt.show()
+
+
+def visualize_projection(image, xData, xProj, title, resize_dim=None):
+    plt.figure()
+    if resize_dim:
+        image = cv2.resize(image, resize_dim)
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
     plotResidual(xData, xProj, 'k-')
     plt.plot(xProj[0, :], xProj[1, :], 'bo')
@@ -106,7 +120,7 @@ def visualize_projection(image, xData, xProj, title):
     plt.show()
     
 
-def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title):
+def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title, resize_dim=None):
     """
     Visualiza la proyección de los puntos iniciales (no optimizados) y optimizados,
     junto con sus errores en el mismo gráfico.
@@ -125,6 +139,8 @@ def visualize_projection_2(image, xData, xProj_no_opt, xProj_opt, title):
         left=0.125,    
         right=0.9,  
     )
+    if resize_dim:
+        image = cv2.resize(image, resize_dim)
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
 
     plotResidual(xData, xProj_no_opt, 'g-')
@@ -162,6 +178,31 @@ def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
     plt.show()
 
 
+
+def show_points_on_image(x_coords, y_coords, labels=None, block=True):
+    """
+    Muestra los puntos en la imagen y los etiqueta.
+    
+    Args:
+        image_path (str): Ruta de la imagen donde se mostrarán los puntos.
+        points (list or array): Lista o array de puntos a mostrar (cada punto debe ser un array [x, y]).
+        labels (list, optional): Lista de etiquetas para los puntos. Si no se proporciona, no se etiquetan.
+    """     
+    # Dibujar los puntos en la imagen
+    plt.scatter(x_coords, y_coords, color='b', s=100, marker='x', label='Puntos')
+    
+    # Etiquetar los puntos si se proporcionan etiquetas
+    if labels is not None:
+        for i, label in enumerate(labels):
+            plt.text(x_coords[i] + 10, y_coords[i] - 10, label, color='red', fontsize=12)
+    
+    # Mostrar el resultado
+    plt.title('Puntos proyectados en la imagen')
+    plt.axis('off')  # Ocultar los ejes
+    # Plot and continue
+    plt.show(block=block)    
+
+    
 ####################################################################################################
 # VISUALIZACIÓN DE PUNTOS 3D
 ####################################################################################################
@@ -231,3 +272,81 @@ def plot3DPoints(points_3d_pose, cameras, world_ref=True):
 
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
+
+
+
+def plot3DPoints_points(points_3d_pose, world_ref=True):
+    """
+    Visualiza puntos 3D sin los sistemas de referencia de cámaras, solo los puntos 3D.
+
+    Parámetros:
+        points_3d_pose: Puntos 3D a visualizar (3, N)
+        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
+    """
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Dibujar el sistema de referencia del mundo si se especifica
+    if world_ref:
+        drawRefSystem(ax, np.eye(4), '-', 'W')
+
+    # Dibujar los puntos 3D
+    ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
+
+    # Crear una caja de límites para una visualización más equilibrada
+    bounding_box_size = 4
+    x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    ax.plot(x_fake, y_fake, z_fake, 'w.')
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+
+    
+def plot3DPoints_tuple(points_3d, cameras, world_ref=True):
+    """
+    Visualiza puntos 3D junto con los sistemas de referencia de varias cámaras en un espacio 3D.
+
+    Parámetros:
+        points_3d_pose: Puntos 3D a visualizar (3, N)
+        cameras: Diccionario de cámaras con nombres como claves y matrices de transformación 4x4 como valores
+                 Ejemplo: {'C1': T_wc1, 'C2': T_wc2}
+        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
+    """
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Dibujar el sistema de referencia del mundo si se especifica
+    if world_ref:
+        drawRefSystem(ax, np.eye(4), '-', 'W')
+
+    # Dibujar cada sistema de referencia de cámara
+    for cam_name, T_wc in cameras.items():
+        drawRefSystem(ax, T_wc, '-', cam_name)
+
+    # Dibujar los puntos 3D
+    for points in points_3d:
+        print(points)
+        ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=1)
+
+    # Crear una caja de límites para una visualización más equilibrada
+    bounding_box_size = 4
+    x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    ax.plot(x_fake, y_fake, z_fake, 'w.')
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+
+
+ 

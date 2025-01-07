@@ -226,3 +226,36 @@ def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
 
     plt.title(title)
     plt.show()
+
+
+
+def plot3DPoints(points_3d_pose, world_ref=True):
+    """
+    Visualiza puntos 3D sin los sistemas de referencia de cámaras, solo los puntos 3D.
+
+    Parámetros:
+        points_3d_pose: Puntos 3D a visualizar (3, N)
+        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
+    """
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Dibujar el sistema de referencia del mundo si se especifica
+    if world_ref:
+        drawRefSystem(ax, np.eye(4), '-', 'W')
+
+    # Dibujar los puntos 3D
+    ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
+
+    # Crear una caja de límites para una visualización más equilibrada
+    bounding_box_size = 4
+    x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
+    ax.plot(x_fake, y_fake, z_fake, 'w.')
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()

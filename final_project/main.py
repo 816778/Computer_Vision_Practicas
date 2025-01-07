@@ -2,7 +2,7 @@
 #
 # Title: main.py
 # Project: 
-# Authors: Eryka Rimacuna and Hugo Mateo
+# Authors: Eryka Rimacuna
 # Description: This file contains the necessary imports for the main.py file.
 #
 ####################################################################################################

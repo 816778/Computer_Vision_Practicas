@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # Arrays to store object points and image points from all the images.
     objpoints = [] # 3d point in real world space
     imgpoints = [] # 2d points in image plane.
-    images = glob.glob('calib_*.jpg')
+    images = glob.glob('mobilePhoneCameraCalibration/calib_*.jpg')
     #cv.namedWindow('img', cv.WINDOW_NORMAL)  # Create window with freedom of dimensions
     #cv.resizeWindow('img', 800, 600)
     for fname in images:

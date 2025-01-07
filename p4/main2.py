@@ -81,10 +81,11 @@ if __name__ == "__main__":
     T_wc2 = utils.ensamble_T(R12, t12)
     T_wc3 = utils.ensamble_T(R13, t13)
 
+
     P1 = utils.projectionMatrix(K_c, T_wc1) # K_c @ T_wc1[0:3, :]
     P2 = utils.projectionMatrix(K_c, T_wc2) # K_c @ T_wc2[0:3, :]
     P3 = utils.projectionMatrix(K_c, T_wc3) # K_c @ T_wc3[0:3, :]
-
+    
     X_w = utils.triangulate_points(P1, P2, x1Data, x2Data)
 
     x1_no_opt = utils.project_points(K_c, T_wc1, X_w)
@@ -94,7 +95,12 @@ if __name__ == "__main__":
     x1 = x1Data
     x2 = x2Data
     x3 = x3Data
-
+    print(f"x1Data: {x1Data.shape}")
+    print(f"X_w shape: {X_w.shape}")
+    print(f"T_wc1: {T_wc1}")
+    print(f"T_wc2: {T_wc2}")
+    print(f"T_wc3: {T_wc3}")
+    exit()
     T_opt, X_w_opt = utils.run_bundle_adjustment([T_wc1, T_wc2, T_wc3], K_c, X_w, [x1, x2, x3])
 
     T_wc1_opt, T_wc2_opt, T_wc3_opt = T_opt
@@ -103,6 +109,9 @@ if __name__ == "__main__":
     x1_p_opt = utils.project_points(K_c, T_wc1_opt, X_w_opt)
     x2_p_opt = utils.project_points(K_c, T_wc2_opt, X_w_opt)
     x3_p_opt = utils.project_points(K_c, T_wc3_opt, X_w_opt)
+    print(f"x1Data: {x1Data.shape}")
+    print(f"X1[0]: {X_w_opt.T[0]}")
+
 
     plot_utils.visualize_projection_2(image1, x1Data, x1_no_opt, x1_p_opt, 'Image 1')
     plot_utils.visualize_projection_2(image2, x2Data, x2_no_opt, x2_p_opt, 'Image 2')
