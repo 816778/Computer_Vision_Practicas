@@ -57,6 +57,14 @@ def calibration_old_camera():
     K_old_estimated = fcv.aprox_K()
 
     T_wc1, T_wc2, T_wc3, T_wc4 = T_list
+    cameras = {
+            'C1': T_wc1,  
+            'C2': T_wc2,
+            'C3': T_wc3,
+            'C4': T_wc4,
+        }
+    print(f"X_w_opt: {X_w.shape}")
+    plot_utils.plot3DPoints(X_w, cameras, world_ref=False)
     
     
     x1, x2, x3, x4 = points_2d[0].T, points_2d[1].T, points_2d[2].T, points_2d[3].T

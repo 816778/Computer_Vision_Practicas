@@ -14,6 +14,7 @@ import cv2
 import cv2 as cv
 import matplotlib.pyplot as plt
 import argparse
+import json
 
 # Import the necessary functions from the files
 import utils.camera_calibration as cam_calib
@@ -112,7 +113,7 @@ def process_images_sift(image_paths, K):
 
 
 
-def process_image_sg(path_superglue, path_images, path_images_order, K, resize_dim=None):
+def process_image_sg(path_superglue, path_images, path_images_order, K, resize_dim=None, save=False):
    
     common_coordinates = fcv.emparejamiento_supergluemultiple(path_superglue, path_images, path_images_order, resize_dim=resize_dim, verbose=False)
 
@@ -129,77 +130,103 @@ def process_image_sg(path_superglue, path_images, path_images_order, K, resize_d
         for i, image_path in enumerate(path_images_order):
             image = cv2.imread(image_path)
             plot_utils.visualize_projection_whitoutGT(image, puntos_por_imagen[i].T, f"Image {i+1}", resize_dim=resize_dim)
+    
 
-    puntos_por_imagen = [puntos_por_imagen[0].T, puntos_por_imagen[1].T, puntos_por_imagen[2].T, puntos_por_imagen[3].T, puntos_por_imagen[4].T]
-
-
+    num_imagenes = len(puntos_por_imagen)
+    puntos_por_imagen = [p.T for p in puntos_por_imagen]
     P_list, T_list = fcv.estimar_posiciones_camaras(common_coordinates, K)
-   
-    P1, P2, P3, P4 = P_list
-    T_wc1, T_wc2, T_wc3, T_wc4 = T_list
+    T_wc = T_list[:num_imagenes]
 
     
     X_w = ut_math.triangulate_multiview(P_list, puntos_por_imagen)
-    print(f"X_w shape: {X_w.shape}")
 
-    x1_no_opt = ut_math.project_points(K, T_wc1, X_w)
-    x2_no_opt = ut_math.project_points(K, T_wc2, X_w)
-    x3_no_opt = ut_math.project_points(K, T_wc3, X_w)
-    x4_no_opt = ut_math.project_points(K, T_wc4, X_w)
+    proyecciones_no_opt = []
+    proyecciones_opt = []
 
-    x1_aux = puntos_por_imagen[0]
-    x2_aux = puntos_por_imagen[1]
-    x3_aux = puntos_por_imagen[2]
-    x4_aux = puntos_por_imagen[3]
-
-
-    cameras = {
-        'C1': T_wc1,  
-        'C2': T_wc2,
-        'C3': T_wc3,
-        'C4': T_wc4
-    }
+    for i in range(num_imagenes):
+        proyecciones_no_opt.append(ut_math.project_points(K, T_wc[i], X_w))
+    cameras = {f'C{i+1}': T_wc[i] for i in range(num_imagenes)}
     plot_utils.plot3DPoints(X_w, cameras, world_ref=False)
- 
-    T_opt, X_w_opt = b_adj.run_bundle_adjustment(T_list, K, X_w, [x1_aux, x2_aux, x3_aux, x4_aux])
 
-    T_wc1_opt, T_wc2_opt, T_wc3_opt, T_wc4_opt = T_opt
-    x1_p_opt = ut_math.project_points(K, T_wc1_opt, X_w_opt)
-    x2_p_opt = ut_math.project_points(K, T_wc2_opt, X_w_opt)
-    x3_p_opt = ut_math.project_points(K, T_wc3_opt, X_w_opt)
-    x4_p_opt = ut_math.project_points(K, T_wc4_opt, X_w_opt)
+    T_wc_opt, X_w_opt = b_adj.run_bundle_adjustment(T_wc, K, X_w, puntos_por_imagen)
 
-    if True:
-        image1 = cv2.imread(path_images_order[0])
-        image2 = cv2.imread(path_images_order[1])
-        image3 = cv2.imread(path_images_order[2])
-        image4 = cv2.imread(path_images_order[3])
-        plot_utils.visualize_projection_2(image1, puntos_por_imagen[0], x1_no_opt, x1_p_opt, 'Image 1', resize_dim=resize_dim)
-        plot_utils.visualize_projection_2(image2, puntos_por_imagen[1], x2_no_opt, x2_p_opt, 'Image 2', resize_dim=resize_dim)
-        plot_utils.visualize_projection_2(image3, puntos_por_imagen[2], x3_no_opt, x3_p_opt, 'Image 3', resize_dim=resize_dim)
-        plot_utils.visualize_projection_2(image4, puntos_por_imagen[3], x4_no_opt, x4_p_opt, 'Image 4', resize_dim=resize_dim)
+    for i in range(num_imagenes):
+        proyecciones_opt.append(ut_math.project_points(K, T_wc_opt[i], X_w_opt))
 
-            
-        cameras = {
-            'C1': T_wc1_opt,  
-            'C2': T_wc2_opt,
-            'C3': T_wc3_opt,
-            'C4': T_wc4_opt,
-        }
-        print(f"X_w_opt: {X_w_opt.shape}")
-        plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)
+    for i in range(num_imagenes):
+        image = cv2.imread(path_images_order[i])
+        plot_utils.visualize_projection_2(image, puntos_por_imagen[i], proyecciones_no_opt[i], proyecciones_opt[i], f'Image {i + 1}', resize_dim=resize_dim)
 
-        np.savez("data/bundle_adjustment_results_old.npz", 
-                cameras={key: T_wc for key, T_wc in cameras.items()},
+
+    cameras = {f'C{i+1}': T_wc_opt[i] for i in range(num_imagenes)} 
+    plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)
+
+    if save:
+        np.savez("data/bundle_adjustment_results_pruebas.npz", 
+                cameras={f'C{i+1}': T_wc[i] for i in range(num_imagenes)},  
                 points_3D=X_w_opt,
-                puntos_0=puntos_por_imagen[0], 
-                puntos_1=puntos_por_imagen[1], 
-                puntos_2=puntos_por_imagen[2], 
-                puntos_3=puntos_por_imagen[3])
+                **{f'puntos_{i}': puntos_por_imagen[i] for i in range(num_imagenes)}) 
 
-        print("Resultados guardados en bundle_adjustment_results_old.npz")
+        print("Resultados guardados en bundle_adjustment_results_pruebas.npz")
 
 
+def process_image_sg_pnp(path_superglue, path_images, path_images_order, K, dist, resize_dim=None, save=False):
+
+    common_coordinates = fcv.emparejamiento_supergluemultiple(path_superglue, path_images, path_images_order, resize_dim=resize_dim, verbose=False, threshold=0.55)
+
+    puntos_por_imagen = [[] for _ in range(len(common_coordinates[0]))]
+    for coord_list in common_coordinates:
+        for i, punto in enumerate(coord_list):
+            puntos_por_imagen[i].append(punto)
+
+    puntos_por_imagen = [np.array(puntos) for puntos in puntos_por_imagen]
+    num_imagenes = len(puntos_por_imagen)
+    puntos_por_imagen = [p.T for p in puntos_por_imagen]
+    for i, puntos in enumerate(puntos_por_imagen):
+        print(f"x{i+1}: {puntos.shape}")
+    
+    watch = False
+    if watch:
+        for i, image_path in enumerate(path_images_order):
+            image = cv2.imread(image_path)
+            plot_utils.visualize_projection_whitoutGT(image, puntos_por_imagen[i].T, f"Image {i+1}", resize_dim=resize_dim)
+    
+
+    P_list, T_list = fcv.estimar_posiciones_camaras(common_coordinates, K)
+    X_w = ut_math.triangulate_multiview(P_list, puntos_por_imagen)
+
+
+    # P_list, T_list, X_w = ut_math.estimate_position_solvepnp(puntos_por_imagen, K, P_list, T_list, X_w.T, dist)
+    T_wc = T_list[:num_imagenes]
+
+    proyecciones_no_opt = []
+    proyecciones_opt = []
+
+    for i in range(num_imagenes):
+        proyecciones_no_opt.append(ut_math.project_points(K, T_wc[i], X_w))
+    cameras = {f'C{i+1}': T_wc[i] for i in range(num_imagenes)}
+    plot_utils.plot3DPoints(X_w, cameras, world_ref=False)
+
+    T_wc_opt, X_w_opt = b_adj.run_bundle_adjustment(T_wc, K, X_w, puntos_por_imagen)
+
+    for i in range(num_imagenes):
+        proyecciones_opt.append(ut_math.project_points(K, T_wc_opt[i], X_w_opt))
+
+    for i in range(num_imagenes):
+        image = cv2.imread(path_images_order[i])
+        plot_utils.visualize_projection_2(image, puntos_por_imagen[i], proyecciones_no_opt[i], proyecciones_opt[i], f'Image {i + 1}', resize_dim=resize_dim)
+
+
+    cameras = {f'C{i+1}': T_wc_opt[i] for i in range(num_imagenes)} 
+    plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)
+
+    if save:
+        np.savez("data/bundle_adjustment_results_pruebas.npz", 
+                cameras={f'C{i+1}': T_wc[i] for i in range(num_imagenes)},  
+                points_3D=X_w_opt,
+                **{f'puntos_{i}': puntos_por_imagen[i] for i in range(num_imagenes)}) 
+
+        print("Resultados guardados en bundle_adjustment_results_pruebas.npz")
 
     
 
@@ -212,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--test', 
         type=int, 
-        default=0, 
+        default=2, 
         help="Valor de la variable 'test'. Valor por defecto es 0."
     )
 
@@ -220,37 +247,32 @@ if __name__ == "__main__":
     args = parser.parse_args()
     test = args.test
 
+    with open('data/config.json', 'r') as f:
+        config = json.load(f)
+
     if test == 0:
-        path_new_images='images/new/pilar_*.jpg'
+        params = config['test_0']
         K, dist, rvecs, tvecs = cam_calib.load_calibration_data("data/camera_calibration.npz")
-        path_superglue=['results/pilar_x1_1_pilar_x1_3_matches.npz', 'results/pilar_x1_1_pilar_x1_4_matches.npz', 'results/pilar_x1_1_pilar_x1_5_matches.npz', 'results/pilar_x1_1_old_pilar1936_matches.npz']
-        path_images = [("images/new/pilar_x1_1.jpg", "images/new/pilar_x1_3.jpg"), 
-                       ("images/new/pilar_x1_1.jpg", "images/new/pilar_x1_4.jpg"),
-                       ("images/new/pilar_x1_1.jpg", "images/new/pilar_x1_5.jpg"),
-                       ("images/new/pilar_x1_1.jpg", "images/new/old_pilar1936.jpg")]
-        resize_dim = (2000, 1126)
     elif test == 1:
-        path_new_images='images/prueba/image_*.png'
-        path_superglue=['results/image_1_image_2_matches.npz', 'results/image_1_image_3_matches.npz']
-        path_images = [("images/prueba/image_1.png", "images/prueba/image_2.png"),
-                       ("images/prueba/image_1.png", "images/prueba/image_3.png")]
+        params = config['test_1']
         K = np.loadtxt("data/K_c.txt")
-        resize_dim = None
-    else:
-        path_new_images='images/prueba/imagen_*.jpeg'
-        path_superglue=['results/imagen_1_imagen_2_matches.npz', 'results/imagen_1_imagen_3_matches.npz']
-        path_images = [("images/prueba/imagen_1.jpeg", "images/prueba/imagen_2.jpeg"),
-                       ("images/prueba/imagen_1.jpeg", "images/prueba/imagen_3.jpeg"),]
+    elif test == 2:
+        params = config['test_2']
         K, dist, rvecs, tvecs = cam_calib.load_calibration_data("data/camera_calibration.npz")
-        resize_dim = None
+    else:
+        params = config['test_4']
+        K, dist, rvecs, tvecs = cam_calib.load_calibration_data("data/camera_calibration.npz")
     
+    path_new_images = params['path_new_images']
     path_new_images = glob.glob(path_new_images)
     path_new_images = sorted(path_new_images)
-    # add to path new images
-    path_new_images = path_new_images + ['images/new/old_pilar1936.jpg']
+    path_superglue = params['path_superglue']
+    path_images = params['path_images']
+    resize_dim = tuple(params['resize_dim']) if params['resize_dim'] else None
+    # path_new_images = path_new_images + ['images/new/old_pilar1936.jpg']
     print(path_new_images)
 
-    process_image_sg(path_superglue, path_images, path_new_images, K, resize_dim=resize_dim)
+    process_image_sg_pnp(path_superglue, path_images, path_new_images, K, dist, resize_dim=resize_dim)
     exit()
 
     

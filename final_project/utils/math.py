@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation as R
 from scipy.linalg import expm, logm
+import utils.bundle_adjustment as b_adj
 
 def project_points(K, T, X_w):
     if T.shape == (3, 4):
@@ -436,13 +437,14 @@ def triangulate_multiview(P_list, puntos_por_imagen):
         X_w: Nube de puntos 3D reconstruida.
     """
     num_puntos = puntos_por_imagen[0].shape[1]
+    num_cameras = len(puntos_por_imagen)
     num_vistas = len(P_list)
+    # print(f"Num puntos: {num_puntos}, Num vistas: {num_vistas}, Num cámaras: {num_cameras}")
     X_w = []
 
     for i in range(num_puntos):
         A = []
         for j in range(num_vistas):
-            coso = puntos_por_imagen[j][:, i]
             x, y = puntos_por_imagen[j][:, i]
             P = P_list[j]
             # Construir las ecuaciones lineales para la triangulación
@@ -602,4 +604,37 @@ def linearPoseEstimation_withoutF(srcPts, dstPts, K_c):
     R12, t12 = select_correct_pose(R12_1, R12_2, t12, K_c, K_c, srcPts, dstPts)
 
     return R12, t12
+
+
+def estimate_position_solvepnp(puntos_por_imagen, K, P_list, T_list, X_w, distCoeffs):
+    num_camaras = len(puntos_por_imagen)
+    P_list = P_list[:2]
+    T_list = T_list[:2]
+    for cam_idx in range(2, num_camaras):
+        # 1. Obtener puntos 2D que coinciden con los puntos 3D existentes
+        puntos_2d = puntos_por_imagen[cam_idx].T  # Puntos de la nueva cámara
+
+        if len(X_w) < 4 or len(puntos_2d) < 4:
+            print(f"Advertencia: Pocos puntos para estimar cámara {cam_idx}. Omitiendo.")
+            continue
+
+        retval, rvec, tvec = cv2.solvePnP(X_w, puntos_2d, K, distCoeffs, flags=cv2.SOLVEPNP_EPNP)
+        
+        R, _ = cv2.Rodrigues(rvec)
+        
+        # 4. Construir matriz de proyección de la cámara P = K [R|t]
+        P_new = K @ np.hstack((R, tvec))
+        T_new = np.eye(4)
+        T_new[:3, :3] = R 
+        T_new[:3, 3] = tvec.flatten()
+
+        T_cw3 = T_new.copy()
+        T_new = np.linalg.inv(T_cw3)
+        P_list.append(P_new)
+        T_list.append(T_new)
+        # X_w = triangulate_multiview(P_list, puntos_por_imagen[:cam_idx+1]).T
+        X_w = triangulate_multiview([P_list[0], P_new], [puntos_por_imagen[0], puntos_2d.T]).T
+
+    return P_list, T_list, X_w.T
+
 

@@ -1,0 +1,67 @@
+{   "test_0": {
+        "path_new_images": "images/new/pilar_*.jpg",
+        "path_superglue": [
+            "results/pilar_x1_1_pilar_x1_3_matches.npz",
+            "results/pilar_x1_1_pilar_x1_4_matches.npz",
+            "results/pilar_x1_1_pilar_x1_5_matches.npz",
+            "results/pilar_x1_1_old_pilar1936_matches.npz"
+        ],
+        "path_images": [
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_3.jpg"],
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_4.jpg"],
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_5.jpg"],
+            ["images/new/pilar_x1_1.jpg", "images/old/pilar1936.jpg"]
+        ],
+        "resize_dim": [2000, 1126]
+    },
+    "test_1": {
+        "path_new_images": "images/prueba/image_*.png",
+        "path_superglue": [
+            "results/image_1_image_2_matches.npz",
+            "results/image_1_image_3_matches.npz"
+        ],
+        "path_images": [
+            ["images/prueba/image_1.png", "images/prueba/image_2.png"],
+            ["images/prueba/image_1.png", "images/prueba/image_3.png"]
+        ],
+        "resize_dim": null
+    },
+    "test_2": {
+        "path_new_images": "images/new/pilar_*.jpg",
+        "path_superglue": [
+            "results/pilar_x1_1_pilar_x1_3_matches.npz",
+            "results/pilar_x1_1_pilar_x1_4_matches.npz",
+            "results/pilar_x1_1_pilar_x1_5_matches.npz"
+        ],
+        "path_images": [
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_3.jpg"],
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_4.jpg"],
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_5.jpg"]
+        ],
+        "resize_dim": [2000, 1126]
+    },
+    "test_4": {
+        "path_new_images": "images/new_2/foc_1/IMG_0*.jpg",
+        "path_superglue": [
+            "results/foc1/IMG_00_1_4_2_IMG_01_1_1_2_matches.npz",
+            "results/foc1/IMG_00_1_4_2_IMG_01_1_2_2_matches.npz",
+            "results/foc1/IMG_00_1_4_2_IMG_01_1_6_2_matches.npz"
+        ],
+        "path_images": [
+            ["images/new_2/IMG_00_1_4_2.jpg", "image/new_2/IMG_01_1_1_2.jpg"],
+            ["images/new_2/IMG_00_1_4_2.jpg", "image/new_2/IMG_01_1_2_2.jpg"],
+            ["images/new_2/IMG_00_1_4_2.jpg", "image/new_2/IMG_01_1_6_2.jpg"]
+        ],
+        "resize_dim": [2000, 1126]
+    },
+    "default": {
+        "path_new_images": "images/new/pilar_*.jpg",
+        "path_superglue": [
+            "results/pilar_x1_1_pilar_x1_3_matches.npz"
+        ],
+        "path_images": [
+            ["images/new/pilar_x1_1.jpg", "images/new/pilar_x1_3.jpg"]
+        ],
+        "resize_dim": [2000, 1126]
+    }
+}

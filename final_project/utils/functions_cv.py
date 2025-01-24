@@ -287,7 +287,7 @@ def emparejamiento_sift_multiple_3(new_images, mtx, verbose=False):
 
 
 
-def emparejamiento_supergluemultiple(path_superglue, path_images, path_images_order, resize_dim=None, verbose=False):
+def emparejamiento_supergluemultiple(path_superglue, path_images, path_images_order, resize_dim=None, verbose=False, threshold=0.6):
     keypoints_list = []
     global_points = defaultdict(list)
     point_id = 0
@@ -301,8 +301,9 @@ def emparejamiento_supergluemultiple(path_superglue, path_images, path_images_or
         keypoints2 = npz['keypoints1']  
         matches = npz['matches'] # también está match_confidence
     
-
-        valid_matches_idx = matches > -1
+        confidence = npz['match_confidence']
+        valid_matches_idx = np.logical_and(matches > -1, confidence > threshold)
+        # valid_matches_idx = matches > -1
         keypoints1_matched = keypoints1[valid_matches_idx]
         keypoints2_matched = keypoints2[matches[valid_matches_idx]]
 
@@ -435,6 +436,41 @@ def estimar_posiciones_camaras(common_coordinates, K):
         proyecciones.append(P_curr)
 
     return proyecciones, T_list
+
+
+
+def triangulate_multiview(P_list, puntos_por_imagen):
+    """
+    Triangula puntos 3D usando múltiples vistas.
+
+    Args:
+        P_list: Lista de matrices de cámara proyectivas (P = K * [R | t]).
+        puntos_por_imagen: Lista de arrays (x, y) de puntos 2D observados en cada vista.
+
+    Returns:
+        X_w: Nube de puntos 3D reconstruida.
+    """
+    num_puntos = puntos_por_imagen[0].shape[1]
+    num_vistas = len(P_list)
+    X_w = []
+
+    for i in range(num_puntos):
+        A = []
+        for j in range(num_vistas):
+            coso = puntos_por_imagen[j][:, i]
+            x, y = puntos_por_imagen[j][:, i]
+            P = P_list[j]
+            # Construir las ecuaciones lineales para la triangulación
+            A.append(x * P[2, :] - P[0, :])
+            A.append(y * P[2, :] - P[1, :])
+        A = np.array(A)
+        # Resolver usando SVD
+        _, _, Vt = np.linalg.svd(A)
+        X = Vt[-1]
+        X = X / X[-1]  # Homogeneizar
+        X_w.append(X[:3])
+    
+    return np.array(X_w).T  # (3, N)
 
 
 
