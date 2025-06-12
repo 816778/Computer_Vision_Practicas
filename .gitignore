@@ -162,11 +162,14 @@ cython_debug/
 #.idea/
 
 *.zip
-prueba
 SuperGluePretrainedNetwork
 /SuperGluePretrainedNetwork
-final_project/images
-/final_project/images
+Fotos_1
+images/Fotos_1
+Fotos_2
+new
+new_2
+old
 /final_project/results/*.png
 bibliografia
 /bibliografia

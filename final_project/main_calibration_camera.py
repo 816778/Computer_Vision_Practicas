@@ -27,7 +27,7 @@ IMAGE_PATH = 'images/'
 DATA_PATH = 'data/'
 
 
-def calibration_my_camera(pattern_size, image_downsize_factor, path_images_calibration='mobilePhoneCameraCalibration/calib_*.jpg'):
+def calibration_my_camera(pattern_size, image_downsize_factor, path_images_calibration='mobilePhoneCameraCalibration/calib_*.jpg', fov=1):
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     calibration_images = glob.glob(path_images_calibration)
 
@@ -39,7 +39,7 @@ def calibration_my_camera(pattern_size, image_downsize_factor, path_images_calib
         exit()
 
     # Guarda los resultados relevantes
-    cam_calib.save_calibration_data(mtx, dist, rvecs, tvecs, "data")
+    cam_calib.save_calibration_data(mtx, dist, rvecs, tvecs, folder="data", fov=fov)
 
     # Error de reproyección
     reprojection_error = cam_calib.calculate_reprojection_error(objpoints, imgpoints, rvecs, tvecs, mtx, dist)
@@ -106,7 +106,6 @@ if __name__ == '__main__':
     pattern_num_cols = 6
     pattern_size = (pattern_num_rows, pattern_num_cols)
     image_downsize_factor = 4
+    fov = "1-5"
 
-    # calibration_my_camera(pattern_size, image_downsize_factor)
-    # calibration_my_camera(pattern_size, image_downsize_factor, path_images_calibration='mobilePhoneCameraCalibration/my_phone/calib_*.jpeg')
-    calibration_old_camera()
+    calibration_my_camera(pattern_size, image_downsize_factor, path_images_calibration=f'mobilePhoneCameraCalibration/my_phone_{fov}/calib_*.jpeg', fov=fov)

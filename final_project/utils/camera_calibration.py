@@ -45,10 +45,10 @@ def calculate_calibration(objpoints, imgpoints, image_size):
 
 
 
-def save_calibration_data(mtx, dist, rvecs, tvecs, folder="data"):
+def save_calibration_data(mtx, dist, rvecs, tvecs, folder="data", fov=1):
     os.makedirs(folder, exist_ok=True)
-    np.savez(os.path.join(folder, "camera_calibration.npz"), mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
-    print(f"Calibration data saved to {folder}/camera_calibration.npz")
+    np.savez(os.path.join(folder, f"camera_calibration_{fov}.npz"), mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+    print(f"Calibration data saved to {folder}/camera_calibration_{fov}.npz")
 
 
 def calculate_reprojection_error(objpoints, imgpoints, rvecs, tvecs, mtx, dist):
