@@ -1,0 +1,42 @@
+{   "test_0": {
+        "path_new_images": "images/image*.png",
+        "path_superglue": [
+            "results/image1_image2_matches.npz",
+            "results/image1_image3_matches.npz",
+            "results/image1_image4_matches.npz",
+            "results/image2_image3_matches.npz",
+            "results/image2_image4_matches.npz",
+            "results/image3_image4_matches.npz"
+           
+        ],
+        "path_images": [
+            ["images/image1.png", "images/image2.png"],
+            ["images/image1.png", "images/image3.png"],
+            ["images/image1.png", "images/image4.png"],
+            ["images/image2.png", "images/image3.png"],
+            ["images/image2.png", "images/image4.png"],
+            ["images/image3.png", "images/image4.png"]
+        ],
+        "resize_dim": [752, 480]
+    },
+    "default": {
+        "path_new_images": "images/prueba/IMG_2*.jpg",
+        "path_superglue": [
+            "results/foc2/IMG_2_4_3_IMG_2_5_3_matches.npz",
+            "results/foc2/IMG_2_4_3_IMG_2_6_1_matches.npz",
+            "results/foc2/IMG_2_4_3_IMG_2_7_2_matches.npz",
+            "results/foc2/IMG_2_5_3_IMG_2_6_1_matches.npz",
+            "results/foc2/IMG_2_5_3_IMG_2_7_2_matches.npz",
+            "results/foc2/IMG_2_6_1_IMG_2_7_2_matches.npz"
+        ],
+        "path_images": [
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_5_3.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_6_1.jpg", "images/prueba/IMG_2_7_2.jpg"]
+        ],
+        "resize_dim": [2000, 1126]
+    }
+}

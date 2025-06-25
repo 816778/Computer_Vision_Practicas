@@ -114,23 +114,5 @@ if __name__ == "__main__":
     T_cw3 = T_wc3.copy()
     T_wc3 = np.linalg.inv(T_cw3)
 
-    fig3D = plt.figure(1)
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    plot_utils.drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    plot_utils.drawRefSystem(ax, T_wc1_opt, '-', 'C1')
-    plot_utils.drawRefSystem(ax, T_wc2_opt, '-', 'C2')
-    plot_utils.drawRefSystem(ax, T_wc3, '-', 'C3')
-
-    ax.scatter(X_w_opt[0, :], X_w_opt[1, :], X_w_opt[2, :], marker='.')
-
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
+    cameras = {'C1': T_wc1, 'C2': T_wc2, 'C3': T_wc3}
+    plot_utils.plot3DPoints(X_w_opt, cameras, world_ref=False)

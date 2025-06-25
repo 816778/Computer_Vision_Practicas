@@ -65,18 +65,18 @@
             "results/foc2/IMG_2_6_1_IMG_2_7_2_matches.npz"
         ],
         "path_images": [
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_5_3.jpg"],
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_6_1.jpg"],
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_7_2.jpg"],
-            ["images/prueba/IMG_2_5_3", "images/prueba/IMG_2_6_1.jpg"],
-            ["images/prueba/IMG_2_5_3", "images/prueba/IMG_2_7_2.jpg"],
-            ["images/prueba/IMG_2_6_1", "images/prueba/IMG_2_7_2.jpg"]
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_5_3.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_6_1.jpg", "images/prueba/IMG_2_7_2.jpg"]
         ],
         "resize_dim": [2000, 1126]
     },
     "default": {
         "path_new_images": "images/prueba/IMG_2*.jpg",
-        "ppath_superglue": [
+        "path_superglue": [
             "results/foc2/IMG_2_4_3_IMG_2_5_3_matches.npz",
             "results/foc2/IMG_2_4_3_IMG_2_6_1_matches.npz",
             "results/foc2/IMG_2_4_3_IMG_2_7_2_matches.npz",
@@ -85,12 +85,12 @@
             "results/foc2/IMG_2_6_1_IMG_2_7_2_matches.npz"
         ],
         "path_images": [
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_5_3.jpg"],
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_6_1.jpg"],
-            ["images/prueba/IMG_2_4_3", "images/prueba/IMG_2_7_2.jpg"],
-            ["images/prueba/IMG_2_5_3", "images/prueba/IMG_2_6_1.jpg"],
-            ["images/prueba/IMG_2_5_3", "images/prueba/IMG_2_7_2.jpg"],
-            ["images/prueba/IMG_2_6_1", "images/prueba/IMG_2_7_2.jpg"]
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_5_3.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_4_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_6_1.jpg"],
+            ["images/prueba/IMG_2_5_3.jpg", "images/prueba/IMG_2_7_2.jpg"],
+            ["images/prueba/IMG_2_6_1.jpg", "images/prueba/IMG_2_7_2.jpg"]
         ],
         "resize_dim": [2000, 1126]
     }

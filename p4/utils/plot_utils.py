@@ -118,6 +118,37 @@ def plot_3D_scene(T_wc1, T_wc2, T_wc3, X_w):
     plt.show()
     
 
+def plot3DPoints(points_3d_pose, cameras, world_ref=True):
+    """
+    Visualiza puntos 3D junto con los sistemas de referencia de varias cámaras en un espacio 3D.
+
+    Parámetros:
+        points_3d_pose: Puntos 3D a visualizar (3, N)
+        cameras: Diccionario de cámaras con nombres como claves y matrices de transformación 4x4 como valores
+                 Ejemplo: {'C1': T_wc1, 'C2': T_wc2}
+        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
+    """
+    fig3D = plt.figure()
+    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Dibujar el sistema de referencia del mundo si se especifica
+    if world_ref:
+        drawRefSystem(ax, np.eye(4), '-', 'W')
+
+    # Dibujar cada sistema de referencia de cámara
+    for cam_name, T_wc in cameras.items():
+        print(f'Transformación de cámara {cam_name}:\n{T_wc}')
+        drawRefSystem(ax, T_wc, '-', cam_name)
+
+    # Dibujar los puntos 3D
+    ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
 
 
 def visualize_matches(image1, image2, kp1, kp2, dMatchesList, title):
@@ -229,33 +260,3 @@ def plot_epipolar_lines(F, x1, img2, title='Epipolar lines'):
 
 
 
-def plot3DPoints(points_3d_pose, world_ref=True):
-    """
-    Visualiza puntos 3D sin los sistemas de referencia de cámaras, solo los puntos 3D.
-
-    Parámetros:
-        points_3d_pose: Puntos 3D a visualizar (3, N)
-        world_ref: Booleano para indicar si se debe dibujar el sistema de referencia del mundo.
-    """
-    fig3D = plt.figure()
-    ax = fig3D.add_subplot(111, projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    # Dibujar el sistema de referencia del mundo si se especifica
-    if world_ref:
-        drawRefSystem(ax, np.eye(4), '-', 'W')
-
-    # Dibujar los puntos 3D
-    ax.scatter(points_3d_pose[0, :], points_3d_pose[1, :], points_3d_pose[2, :], marker='.', color='b')
-
-    # Crear una caja de límites para una visualización más equilibrada
-    bounding_box_size = 4
-    x_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
-    y_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
-    z_fake = np.linspace(-bounding_box_size, bounding_box_size, 2)
-    ax.plot(x_fake, y_fake, z_fake, 'w.')
-
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
