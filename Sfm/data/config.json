@@ -9,6 +9,12 @@
             "results/image3_image4_matches.npz"
            
         ],
+        "path_old_superglue": [
+            "results/image1_old-image_matches.npz",
+            "results/image2_old-image_matches.npz",
+            "results/image3_old-image_matches.npz",
+            "results/image4_old-image_matches.npz"
+        ],
         "path_images": [
             ["images/image1.png", "images/image2.png"],
             ["images/image1.png", "images/image3.png"],
@@ -17,7 +23,40 @@
             ["images/image2.png", "images/image4.png"],
             ["images/image3.png", "images/image4.png"]
         ],
+        "path_old_images": [
+            ["images/image1.png", "images/old-image.png"],
+            ["images/image2.png", "images/old-image.png"],
+            ["images/image3.png", "images/old-image.png"],
+            ["images/image4.png", "images/old-image.png"]
+        ],
         "resize_dim": [752, 480]
+    },
+    "test_1": {
+        "path_new_images": "images/prueba/image*.png",
+        "path_superglue": [
+            "results/foc2/image1_image2_matches.npz",
+            "results/foc2/image1_image3_matches.npz",
+            "results/foc2/image1_image4_matches.npz",
+            "results/foc2/image2_image3_matches.npz",
+            "results/foc2/image2_image4_matches.npz",
+            "results/foc2/image3_image4_matches.npz"
+           
+        ],
+        "path_images": [
+            ["images/prueba/image1.png", "images/prueba/image2.png"],
+            ["images/prueba/image1.png", "images/prueba/image3.png"],
+            ["images/prueba/image1.png", "images/prueba/image4.png"],
+            ["images/prueba/image2.png", "images/prueba/image3.png"],
+            ["images/prueba/image2.png", "images/prueba/image4.png"],
+            ["images/prueba/image3.png", "images/prueba/image4.png"]
+        ],
+        "path_old_images": [
+            ["images/prueba/image1.png", "images/prueba/old_image.png"],
+            ["images/prueba/image2.png", "images/prueba/old_image.png"],
+            ["images/prueba/image3.png", "images/prueba/old_image.png"],
+            ["images/prueba/image4.png", "images/prueba/old_image.png"]
+        ],
+        "resize_dim": [2000, 1126]
     },
     "default": {
         "path_new_images": "images/prueba/IMG_2*.jpg",

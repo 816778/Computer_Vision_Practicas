@@ -46,3 +46,5 @@ class Reconstruccion3D:
         print(f"Total de imágenes: {len(self.image_data)}")
         for img_name, data in self.image_data.items():
             print(f"Imagen: {img_name}, R: {data['R'].shape}, t: {data['t'].shape}, ref: {data['ref'].shape if 'ref' in data else 'N/A'}, T_wc: {data['t_wc'].shape if 't_wc' in data else 'N/A'}")
+        
+    
